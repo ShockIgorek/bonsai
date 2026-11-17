@@ -112,3 +112,13 @@
   --accent: #09DBC7; --accent-dim: #0a9b8e; --danger: #BD0927;
   --border: #2a4058; --shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
+
+/* Фильтры для тем, у которых их не было */
+[data-theme="dark"] .tinder-image { filter: none; }
+[data-theme="light"] .tinder-image { filter: none; }
+[data-theme="nuance"] .tinder-image { filter: sepia(0.2) hue-rotate(300deg); }
+[data-theme="aqua"] .tinder-image { filter: hue-rotate(150deg) saturate(1.2); }
+[data-theme="sunset"] .tinder-image { filter: sepia(0.4) saturate(1.3) hue-rotate(-30deg); }
+[data-theme="amber"] .tinder-image { filter: sepia(0.5) saturate(1.2); }
+[data-theme="bonsai"] .tinder-image { filter: contrast(1.1) saturate(1.2); }
+[data-theme="forest"] .tinder-image { filter: hue-rotate(60deg) saturate(1.3); }

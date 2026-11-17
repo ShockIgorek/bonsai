@@ -5,6 +5,8 @@
   flex-direction: column;
   box-sizing: border-box;
   color: var(--text-main);
+  background: var(--bg-main);
+  overflow-y: auto;
 }
 
 .themes-title {
@@ -15,41 +17,103 @@
   color: var(--text-main);
 }
 
-.themes-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  flex: 1;
-  align-content: start;
+.themes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .theme-card {
-  background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 20px;
+  padding: 0;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
   transition: transform 0.15s, border-color 0.15s;
-  color: var(--text-main);
-  font-family: inherit;
+  display: block;
+  width: 100%;
+  background: var(--bg-card); /* Фон плашки — цвет темы */
+  overflow: hidden;
 }
 
-.theme-card:active { transform: scale(0.97); }
+.theme-card:active { transform: scale(0.98); }
 .theme-card:hover { border-color: var(--accent); }
 
-.theme-color {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+.theme-preview {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 12px; /* Отступы внутри карточки */
+  box-sizing: border-box;
 }
 
-.theme-name {
+/* Картинка — вложенная, с отступами и скруглением */
+.theme-preview-img {
+  width: 100%;
+  height: 140px;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+/* Затемнение поверх картинки (для читаемости текста) */
+.theme-preview-img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 60%);
+}
+
+.theme-preview-overlay {
+  position: relative;
+  z-index: 2;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: -60px; /* Накладываем текст на нижнюю часть картинки */
+}
+
+.theme-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.theme-preview-title {
+  font-size: 18px;
+  font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  color: #fff; /* Белый текст на затемнённой картинке */
+}
+
+.theme-preview-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.5);
+  background: var(--accent);
+}
+
+.theme-preview-desc {
+  font-size: 14px;
+  line-height: 1.4;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  color: rgba(255,255,255,0.9); /* Белый полупрозрачный */
+}
+
+.theme-preview-btn {
+  align-self: flex-start;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
-  text-align: center;
+  margin-top: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  text-shadow: none; /* Кнопка без тени */
 }

@@ -17,16 +17,34 @@ export function renderThemesScreen() {
   const app = document.getElementById('app');
   if (!app) return;
 
+  const savedTheme = localStorage.getItem('bonsai-theme') || 'bonsai';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
   app.innerHTML = `
     <div class="themes-screen">
       <h1 class="themes-title">Выбери настроение</h1>
-      <div class="themes-grid">
-        ${THEMES.map(t => `
+      <div class="themes-list">
+        ${THEMES.map(t => {
+          const filter = getThemeFilter(t.id);
+          return `
           <button class="theme-card" data-theme="${t.id}">
-            <div class="theme-color" style="background: var(--bg-main); border: 2px solid var(--border);"></div>
-            <span class="theme-name">${t.name}</span>
+            <div class="theme-preview" data-theme="${t.id}">
+              <!-- Фон карточки (цвет темы) -->
+              <div class="theme-bg" style="background: var(--bg-card);"></div>
+              <!-- Картинка с локальным фильтром -->
+              <div class="theme-preview-img" style="background-image: url('/assets/bonsai-preview.jpg'); filter: ${filter};"></div>
+              
+              <div class="theme-preview-overlay">
+                <div class="theme-preview-header">
+                  <span class="theme-preview-title">${t.name}</span>
+                  <span class="theme-preview-badge"></span>
+                </div>
+                <div class="theme-preview-desc">Пример описания задачи</div>
+                <div class="theme-preview-btn">Сделать</div>
+              </div>
+            </div>
           </button>
-        `).join('')}
+        `}).join('')}
       </div>
     </div>
   `;
@@ -35,8 +53,26 @@ export function renderThemesScreen() {
     btn.addEventListener('click', () => {
       const theme = btn.dataset.theme;
       document.documentElement.setAttribute('data-theme', theme);
-      // Сохраняем выбор, чтобы не сбрасывался
       localStorage.setItem('bonsai-theme', theme);
     });
   });
+}
+
+function getThemeFilter(themeId) {
+  const filters = {
+    'noir': 'grayscale(100%) contrast(1.2)',
+    'ice': 'sepia(0.3) hue-rotate(180deg) saturate(1.5)',
+    'neon': 'contrast(1.2) saturate(1.5) hue-rotate(300deg)',
+    'vice': 'contrast(1.1) saturate(1.3) hue-rotate(240deg)',
+    'ember': 'sepia(0.6) saturate(1.4) hue-rotate(-20deg)',
+    'nuance': 'sepia(0.2) hue-rotate(300deg)',
+    'aqua': 'hue-rotate(150deg) saturate(1.2)',
+    'sunset': 'sepia(0.4) saturate(1.3) hue-rotate(-30deg)',
+    'amber': 'sepia(0.5) saturate(1.2)',
+    'bonsai': 'contrast(1.1) saturate(1.2)',
+    'forest': 'hue-rotate(60deg) saturate(1.3)',
+    'dark': 'none',
+    'light': 'none'
+  };
+  return filters[themeId] || 'none';
 }

@@ -92,3 +92,9 @@
 [data-theme="ember"] .tinder-image {
   filter: sepia(0.6) saturate(1.4) hue-rotate(-20deg);
 }
+[data-theme="bonsai"] {
+  --bg-main: #15161A; --bg-panel: #1C1E24; --bg-card: #24262E; --bg-header: #2D3038;
+  --text-main: #FFFFFF; --text-secondary: #A0A4AA; --text-muted: #6E7176;
+  --accent: #E70103; --accent-dim: #B30002; --danger: #E70103;
+  --border: #2D3038; --shadow: 0 4px 12px rgba(0,0,0,0.7);
+}

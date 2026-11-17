@@ -9,7 +9,8 @@ const THEMES = [
   { id: 'noir', name: 'Noir' },
   { id: 'aqua', name: 'Aqua' },
   { id: 'sunset', name: 'Sunset' },
-  { id: 'amber', name: 'Amber' }
+  { id: 'amber', name: 'Amber' },
+  { id: 'forest', name: 'Forest' }
 ];
 
 export function renderThemesScreen() {

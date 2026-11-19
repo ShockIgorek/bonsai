@@ -14,7 +14,7 @@ const THEMES = [
 ];
 
 export function renderThemesScreen() {
-  const app = document.getElementById('app');
+  const app = document.getElementById('main-content');
   if (!app) return;
 
   const savedTheme = localStorage.getItem('bonsai-theme') || 'bonsai';
@@ -22,16 +22,17 @@ export function renderThemesScreen() {
 
   app.innerHTML = `
     <div class="themes-screen">
-      <h1 class="themes-title">Выбери настроение</h1>
+      <div class="themes-header-row">
+        <button class="back-btn" aria-label="Назад">←</button>
+        <h1 class="themes-title">Выбери тему</h1>
+      </div>
       <div class="themes-list">
         ${THEMES.map(t => {
           const filter = getThemeFilter(t.id);
           return `
           <button class="theme-card" data-theme="${t.id}">
             <div class="theme-preview" data-theme="${t.id}">
-              <!-- Фон карточки (цвет темы) -->
               <div class="theme-bg" style="background: var(--bg-card);"></div>
-              <!-- Картинка с локальным фильтром -->
               <div class="theme-preview-img" style="background-image: url('/assets/bonsai-preview.jpg'); filter: ${filter};"></div>
               
               <div class="theme-preview-overlay">
@@ -49,11 +50,18 @@ export function renderThemesScreen() {
     </div>
   `;
 
+  app.querySelector('.back-btn')?.addEventListener('click', () => {
+    import('../router.js').then(m => m.showMoodsScreen());
+  });
+
   app.querySelectorAll('.theme-card').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
       const theme = btn.dataset.theme;
       document.documentElement.setAttribute('data-theme', theme);
       localStorage.setItem('bonsai-theme', theme);
+      // Перерисовываем экран, чтобы превью и цвета обновились
+      renderThemesScreen();
     });
   });
 }

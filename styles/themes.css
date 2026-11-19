@@ -117,3 +117,34 @@
   color: var(--text-main);
   text-shadow: none; /* Кнопка без тени */
 }
+
+.themes-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.back-btn:hover { background: var(--bg-panel); }
+
+/* Убираем старый отступ у заголовка, так как теперь он в строке */
+.themes-title {
+  margin: 0 !important;
+  text-align: left !important;
+}

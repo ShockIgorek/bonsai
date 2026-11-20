@@ -4,7 +4,6 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // Получаем имя активного настроения
   const moods = getMoods();
   const activeMoodId = localStorage.getItem('bonsai-active-mood') || 'default';
   const activeMood = moods.find(m => m.id === activeMoodId) || moods[0];
@@ -31,19 +30,29 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
       ` : ''}
     </div>
   `;
+
+  // Обработчик таб-бара
+  if (showTabs) {
+    app.querySelectorAll('.tab-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.view;
+        // Переключаем активный класс
+        app.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // Рендерим соответствующий режим
+        import('../router.js').then(m => m.showMainView(mode));
+      });
+    });
+  }
 }
 
-/**
- * Обновляет только текст в хедере, не перерисовывая весь layout.
- * Вызывать после смены активного настроения.
- */
 export function updateHeaderMoodName() {
   const logo = document.querySelector('.header .logo');
   if (!logo) return;
-  
+
   const moods = getMoods();
   const activeMoodId = localStorage.getItem('bonsai-active-mood') || 'default';
   const activeMood = moods.find(m => m.id === activeMoodId) || moods[0];
-  
+
   logo.textContent = activeMood ? activeMood.name : 'Bonsai';
 }

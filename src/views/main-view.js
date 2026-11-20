@@ -1,11 +1,19 @@
+import { renderListView } from './list-view.js';
+
 export function renderMainView(mode = 'tinder') {
   const main = document.getElementById('main-content');
   if (!main) return;
 
+  // Если режим "список" — рендерим дерево
+  if (mode === 'list') {
+    renderListView();
+    return;
+  }
+
+  // Заглушки для остальных режимов
   const titles = {
     tinder: '🔥 Тиндер',
-    navigation: '📁 Навигация',
-    list: '📋 Список'
+    navigation: '📁 Навигация'
   };
 
   main.innerHTML = `

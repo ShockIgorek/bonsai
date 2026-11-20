@@ -3,6 +3,7 @@ import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 import { openAddTaskModal, openEditTaskModal, openDeleteTaskModal } from './task-modal.js';
+import { openTaskView } from './task-view.js';
 
 function getTaskEmoji(name) {
   const n = (name || '').toLowerCase();
@@ -118,7 +119,8 @@ export function renderNavView() {
           nav.currentId = id;
           render();
         } else {
-          alert(`Задача: ${nav.byId.get(id).name}`);
+          const task = nav.byId.get(id);
+          openTaskView(task, () => renderNavView());
         }
       });
     });

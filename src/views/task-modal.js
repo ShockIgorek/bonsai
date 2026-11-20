@@ -177,3 +177,61 @@ export function openDeleteTaskModal(task, onSaved) {
     if (typeof onSaved === 'function') onSaved();
   });
 }
+
+/**
+ * Открывает модалку добавления подзадачи (превращает лист в папку).
+ */
+export function openAddSubtaskModal(task, onSaved) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 class="modal-title">Подзадача для «${task.name}»</h2>
+        <button class="modal-close" aria-label="Закрыть">×</button>
+      </div>
+      <div class="modal-body">
+        <label class="input-label">Название</label>
+        <input class="input-field" id="subtask-name" type="text" placeholder="Например: помыть пол" />
+        <label class="input-label">Описание</label>
+        <textarea class="input-field" id="subtask-desc" rows="2" placeholder="Коротко о задаче"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-save" id="subtask-save">Добавить</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+
+  modal.querySelector('.modal-close').addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+  modal.querySelector('#subtask-save').addEventListener('click', () => {
+    const name = modal.querySelector('#subtask-name').value.trim();
+    const desc = modal.querySelector('#subtask-desc').value.trim();
+    if (!name) return;
+
+    const tree = getTasksTree();
+
+    function findAndConvert(node, targetName) {
+      if (node.name === targetName) {
+        if (!node.children) node.children = [];
+        node.children.push({ name, desc });
+        return true;
+      }
+      if (node.children) {
+        for (const child of node.children) {
+          if (findAndConvert(child, targetName)) return true;
+        }
+      }
+      return false;
+    }
+
+    findAndConvert(tree, task.name);
+    saveTasksTree(tree);
+    close();
+    if (typeof onSaved === 'function') onSaved();
+  });
+}

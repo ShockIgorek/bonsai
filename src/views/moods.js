@@ -1,4 +1,5 @@
 import { getMoods } from '../data/moods-store.js';
+import { updateHeaderMoodName } from './layout.js';
 import { openMoodModal } from './mood-modal.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 
@@ -63,6 +64,7 @@ export function renderMoodsScreen() {
       localStorage.setItem('bonsai-active-mood', moodId);
       document.documentElement.setAttribute('data-theme', mood.theme || 'bonsai');
       localStorage.setItem('bonsai-theme', mood.theme || 'bonsai');
+      updateHeaderMoodName();
       renderMoodsScreen();
     });
   });

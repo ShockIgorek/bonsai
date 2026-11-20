@@ -1,12 +1,9 @@
 import { buildNavIndex } from '../store.js';
-import { demoTree } from '../../data/demo-tree.js';
+import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
+import { openAddTaskModal, openEditTaskModal, openDeleteTaskModal } from './task-modal.js';
 
-/**
- * Возвращает эмодзи-заглушку для задачи (по ключевым словам).
- * Позже заменим на реальные картинки.
- */
 function getTaskEmoji(name) {
   const n = (name || '').toLowerCase();
   if (n.includes('посуд') || n.includes('тарел') || n.includes('чашк')) return '🍽️';
@@ -44,19 +41,17 @@ function getTaskEmoji(name) {
   if (n.includes('друз') || n.includes('встрет')) return '👥';
   if (n.includes('мам') || n.includes('бабушк') || n.includes('позвон')) return '📞';
   if (n.includes('серег') || n.includes('доебат')) return '😜';
-  return '📝'; // дефолт
+  return '📝';
 }
 
-/**
- * Рендерит экран навигации (проводник, как в Windows).
- */
 export function renderNavView() {
   const main = document.getElementById('main-content');
   if (!main) return;
 
-  const nav = buildNavIndex(demoTree);
+  const tasksTree = getTasksTree();
+  const nav = buildNavIndex(tasksTree);
 
-  // Получаем активное настроение и его фильтр
+  // Активное настроение
   const moods = getMoods();
   const activeMoodId = localStorage.getItem('bonsai-active-mood') || 'default';
   const activeMood = moods.find(m => m.id === activeMoodId) || moods[0];
@@ -65,11 +60,10 @@ export function renderNavView() {
   function render() {
     const node = nav.current;
     if (!node) return;
-
     const children = nav.children;
     const breadcrumbs = nav.breadcrumbs;
-    // Собираем id для каждого уровня крошек
-    // Путь: [root, child1, child2...]. Нам нужны id.
+
+    // Для крошек собираем id
     const breadcrumbIds = [];
     let cur = node;
     while (cur) {
@@ -80,7 +74,6 @@ export function renderNavView() {
     main.innerHTML = `
       <div class="nav-view" style="padding: 16px; color: var(--text-main); display: flex; flex-direction: column; height: 100%; box-sizing: border-box;">
         
-        <!-- Хлебные крошки и кнопка назад -->
         <div class="nav-header" style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-shrink: 0;">
           ${nav.currentId !== nav.rootId ? `<button id="nav-back" class="back-btn" aria-label="Назад">←</button>` : ''}
           <div class="nav-breadcrumbs" style="font-size: 14px; color: var(--text-secondary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
@@ -94,7 +87,6 @@ export function renderNavView() {
           </div>
         </div>
 
-        <!-- Сетка карточек -->
         <div class="nav-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; overflow-y: auto; align-content: start;">
           ${children.map(child => {
             const isFolder = !child.isLeaf;
@@ -106,13 +98,18 @@ export function renderNavView() {
               </div>
             `;
           }).join('')}
+          
+          <!-- Карточка "Добавить" (как в настроениях) -->
+          <div id="nav-add-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; background: var(--bg-card); border: 2px dashed var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s; min-height: 100px;">
+            <div style="font-size: 40px; line-height: 1; color: var(--text-muted);">+</div>
+            <div style="font-size: 13px; font-weight: 600; text-align: center; color: var(--text-secondary);">Добавить</div>
+          </div>
         </div>
-
-        ${children.length === 0 ? `<div style="text-align: center; color: var(--text-secondary); padding: 40px 0;">Пусто</div>` : ''}
+        ${children.length === 0 ? `<div style="text-align: center; color: var(--text-secondary); padding: 40px 0;">Пусто. Нажми «Добавить» чтобы создать задачу.</div>` : ''}
       </div>
     `;
 
-    // Клик по элементу
+    // Клик по папке/листу
     main.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', () => {
         const id = item.dataset.id;
@@ -126,7 +123,7 @@ export function renderNavView() {
       });
     });
 
-    // Клик по хлебным крошкам
+    // Хлебные крошки
     main.querySelectorAll('.nav-crumb').forEach(crumb => {
       crumb.addEventListener('click', () => {
         nav.currentId = crumb.dataset.id;
@@ -134,12 +131,23 @@ export function renderNavView() {
       });
     });
 
-    // Кнопка "Назад" (вверх по дереву)
+    // Назад
     main.querySelector('#nav-back')?.addEventListener('click', () => {
       if (node.parentId) {
         nav.currentId = node.parentId;
         render();
       }
+    });
+
+    // Карточка "Добавить"
+    main.querySelector('#nav-add-card')?.addEventListener('click', () => {
+      openAddTaskModal(node.name, () => {
+        const newTree = getTasksTree();
+        const newNav = buildNavIndex(newTree);
+        // Перерисовываем на том же уровне (сбрасываем на root для простоты)
+        // В будущем сделаем сохранение позиции
+        renderNavView();
+      });
     });
   }
 

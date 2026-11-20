@@ -49,7 +49,7 @@
 }
 
 .mood-card {
-  position: relative;
+  position: relative !important;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 20px;
@@ -95,4 +95,9 @@
 
 .mood-card.add-mood .mood-preview {
   background: transparent !important;
+}
+
+/* картинка настроения вместо иконки */
+.mood-preview img {
+  display: block;
 }

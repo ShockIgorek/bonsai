@@ -1,3 +1,5 @@
+import { getMoods, updateMood } from '../data/moods-store.js';
+
 const THEMES = [
   { id: 'dark', name: 'Dark' },
   { id: 'light', name: 'Light' },
@@ -13,18 +15,31 @@ const THEMES = [
   { id: 'forest', name: 'Forest' }
 ];
 
-export function renderThemesScreen() {
+/**
+ * Экран выбора темы.
+ * @param {object} options
+ * @param {string} [options.forMoodId] — если задан, тема сохраняется в это настроение
+ *                                       и после выбора возвращаемся на экран настроений.
+ */
+export function renderThemesScreen({ forMoodId } = {}) {
   const app = document.getElementById('main-content');
   if (!app) return;
 
-  const savedTheme = localStorage.getItem('bonsai-theme') || 'bonsai';
-  document.documentElement.setAttribute('data-theme', savedTheme);
+  // Какая тема сейчас активна для контекста?
+  let currentTheme;
+  if (forMoodId) {
+    const mood = getMoods().find(m => m.id === forMoodId);
+    currentTheme = mood?.theme || 'bonsai';
+  } else {
+    currentTheme = localStorage.getItem('bonsai-theme') || 'bonsai';
+  }
+  document.documentElement.setAttribute('data-theme', currentTheme);
 
   app.innerHTML = `
     <div class="themes-screen">
       <div class="themes-header-row">
         <button class="back-btn" aria-label="Назад">←</button>
-        <h1 class="themes-title">Выбери тему</h1>
+        <h1 class="themes-title">${forMoodId ? 'Тема настроения' : 'Выбери тему'}</h1>
       </div>
       <div class="themes-list">
         ${THEMES.map(t => {
@@ -34,7 +49,7 @@ export function renderThemesScreen() {
             <div class="theme-preview" data-theme="${t.id}">
               <div class="theme-bg" style="background: var(--bg-card);"></div>
               <div class="theme-preview-img" style="background-image: url('/assets/bonsai-preview.jpg'); filter: ${filter};"></div>
-              
+
               <div class="theme-preview-overlay">
                 <div class="theme-preview-header">
                   <span class="theme-preview-title">${t.name}</span>
@@ -50,6 +65,7 @@ export function renderThemesScreen() {
     </div>
   `;
 
+  // Назад: либо в настроения (если был контекст), либо в настроения (по умолчанию)
   app.querySelector('.back-btn')?.addEventListener('click', () => {
     import('../router.js').then(m => m.showMoodsScreen());
   });
@@ -58,10 +74,21 @@ export function renderThemesScreen() {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const theme = btn.dataset.theme;
-      document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('bonsai-theme', theme);
-      // Перерисовываем экран, чтобы превью и цвета обновились
-      renderThemesScreen();
+
+      if (forMoodId) {
+        // Сохраняем тему в конкретное настроение
+        updateMood(forMoodId, { theme });
+        // И применяем её глобально, чтобы пользователь сразу увидел
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('bonsai-theme', theme);
+        // Вариант А: возвращаемся на экран настроений
+        import('../router.js').then(m => m.showMoodsScreen());
+      } else {
+        // Глобальная тема (как раньше)
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('bonsai-theme', theme);
+        renderThemesScreen();
+      }
     });
   });
 }

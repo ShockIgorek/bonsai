@@ -1,5 +1,6 @@
 import { getMoods } from '../data/moods-store.js';
 import { openMoodModal } from './mood-modal.js';
+import { getThemeFilter } from '../utils/theme-filter.js';
 
 export function renderMoodsScreen() {
   const main = document.getElementById('main-content');
@@ -17,33 +18,41 @@ export function renderMoodsScreen() {
       </div>
 
       <div class="moods-grid">
-        ${moods.map(m => `
-          <div class="mood-card ${m.id === activeMoodId ? 'is-active' : ''}" data-mood="${m.id}" role="button" tabindex="0">
-            <div class="mood-preview" style="background: var(--bg-card); border: 2px solid var(--border);">
+        ${moods.map(m => {
+          const isActive = m.id === activeMoodId;
+          const theme = m.theme || 'bonsai';
+          const filter = getThemeFilter(theme);
+          
+          return `
+          <div class="mood-card ${isActive ? 'is-active' : ''}" data-mood="${m.id}" data-theme="${theme}" role="button" tabindex="0">
+            
+            <div class="mood-cover">
               ${m.image
-                ? `<img src="${m.image}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" onerror="this.style.display='none'"/>`
-                : `<span style="font-size: 32px;">${m.icon || '🙂'}</span>`}
+                ? `<img src="${m.image}" alt="${m.name}" style="filter: ${filter};" onerror="this.style.display='none'"/>`
+                : `<div class="mood-cover-placeholder" style="filter: ${filter};">🌱</div>`}
             </div>
-            <span class="mood-name">${m.name}</span>
+
+            <div class="mood-info">
+              <span class="mood-name">${m.name}</span>
+              ${m.description ? `<span class="mood-desc">${m.description}</span>` : ''}
+            </div>
+
             <button class="edit-mood-btn" data-edit="${m.id}" aria-label="Редактировать">✏️</button>
+            
+            ${isActive ? '<div class="mood-active-badge">✓</div>' : ''}
           </div>
-        `).join('')}
+        `}).join('')}
 
         <div class="mood-card add-mood" data-mood="add" role="button" tabindex="0">
-          <div class="mood-preview" style="background: var(--bg-panel); border: 2px dashed var(--border);">
+          <div class="mood-cover-placeholder" style="background: var(--bg-panel); border: 2px dashed var(--border);">
             <span style="color: var(--text-muted); font-size: 32px;">+</span>
           </div>
-          <span class="mood-name">Добавить</span>
+          <span class="mood-name" style="padding: 16px;">Добавить</span>
         </div>
       </div>
     </div>
   `;
 
-  main.querySelector('.back-btn')?.addEventListener('click', () => {
-    import('./themes.js').then(m => m.renderThemesScreen());
-  });
-
-  // Клик по карточке — только выбор темы
   main.querySelectorAll('.mood-card:not(.add-mood)').forEach(card => {
     card.addEventListener('click', (e) => {
       if (e.target.closest('.edit-mood-btn')) return;
@@ -52,12 +61,12 @@ export function renderMoodsScreen() {
       if (!mood) return;
 
       localStorage.setItem('bonsai-active-mood', moodId);
-      document.documentElement.setAttribute('data-theme', mood.theme);
+      document.documentElement.setAttribute('data-theme', mood.theme || 'bonsai');
+      localStorage.setItem('bonsai-theme', mood.theme || 'bonsai');
       renderMoodsScreen();
     });
   });
 
-  // Карандаш — открыть модалку
   main.querySelectorAll('.edit-mood-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -66,8 +75,11 @@ export function renderMoodsScreen() {
     });
   });
 
-  // "Добавить" — открыть модалку в режиме создания
   main.querySelector('.add-mood')?.addEventListener('click', () => {
     openMoodModal(null, renderMoodsScreen);
+  });
+
+  main.querySelector('.back-btn')?.addEventListener('click', () => {
+    import('./themes.js').then(m => m.renderThemesScreen());
   });
 }

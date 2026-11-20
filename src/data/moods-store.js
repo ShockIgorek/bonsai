@@ -57,3 +57,47 @@ export function addMood(mood) {
   saveMoods(moods);
   return newMood;
 }
+
+// ========== СКРЫТИЕ ЗАДАЧ ДЛЯ НАСТРОЕНИЯ ==========
+
+/**
+ * Скрыть задачу для конкретного настроения.
+ * @param {string} moodId — id настроения
+ * @param {string} taskId — id задачи (из nav.byId)
+ */
+export function hideTaskForMood(moodId, taskId) {
+  const moods = getMoods();
+  const mood = moods.find(m => m.id === moodId);
+  if (!mood) return;
+  if (!mood.hiddenTasks) mood.hiddenTasks = [];
+  if (!mood.hiddenTasks.includes(taskId)) {
+    mood.hiddenTasks.push(taskId);
+    saveMoods(moods);
+  }
+}
+
+/**
+ * Показать (восстановить) задачу для конкретного настроения.
+ * @param {string} moodId — id настроения
+ * @param {string} taskId — id задачи
+ */
+export function showTaskForMood(moodId, taskId) {
+  const moods = getMoods();
+  const mood = moods.find(m => m.id === moodId);
+  if (!mood || !mood.hiddenTasks) return;
+  mood.hiddenTasks = mood.hiddenTasks.filter(id => id !== taskId);
+  saveMoods(moods);
+}
+
+/**
+ * Проверить, скрыта ли задача для настроения.
+ * @param {string} moodId — id настроения
+ * @param {string} taskId — id задачи
+ * @returns {boolean}
+ */
+export function isTaskHiddenForMood(moodId, taskId) {
+  const moods = getMoods();
+  const mood = moods.find(m => m.id === moodId);
+  if (!mood || !mood.hiddenTasks) return false;
+  return mood.hiddenTasks.includes(taskId);
+}

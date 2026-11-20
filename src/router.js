@@ -7,8 +7,11 @@ export function initRouter() {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // Стартуем с главного экрана (режим тиндера пока заглушка)
-  // Но если активного настроения нет — можно показать настроения (опционально)
+  // Применяем сохранённую тему при старте
+  const savedTheme = localStorage.getItem('bonsai-theme') || 'bonsai';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
+  // Стартуем с главного экрана (Тиндер)
   renderLayout({ showHeader: true, showTabs: true });
   renderMainView('tinder');
 }
@@ -16,6 +19,10 @@ export function initRouter() {
 export function showMainView(mode = 'tinder') {
   const app = document.getElementById('app');
   if (!app) return;
+
+  // Применяем сохранённую тему
+  const savedTheme = localStorage.getItem('bonsai-theme') || 'bonsai';
+  document.documentElement.setAttribute('data-theme', savedTheme);
 
   renderLayout({ showHeader: true, showTabs: true });
   renderMainView(mode);

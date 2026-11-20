@@ -1,5 +1,7 @@
 import { buildNavIndex } from '../store.js';
 import { demoTree } from '../../data/demo-tree.js';
+import { getMoods } from '../data/moods-store.js';
+import { getThemeFilter } from '../utils/theme-filter.js';
 
 /**
  * Возвращает эмодзи-заглушку для задачи (по ключевым словам).
@@ -54,6 +56,12 @@ export function renderNavView() {
 
   const nav = buildNavIndex(demoTree);
 
+  // Получаем активное настроение и его фильтр
+  const moods = getMoods();
+  const activeMoodId = localStorage.getItem('bonsai-active-mood') || 'default';
+  const activeMood = moods.find(m => m.id === activeMoodId) || moods[0];
+  const themeFilter = activeMood ? getThemeFilter(activeMood.theme) : 'none';
+
   function render() {
     const node = nav.current;
     if (!node) return;
@@ -93,7 +101,7 @@ export function renderNavView() {
             const icon = isFolder ? '📁' : getTaskEmoji(child.name);
             return `
               <div class="nav-item" data-id="${child.id}" data-is-folder="${isFolder}" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s;">
-                <div class="nav-item-icon" style="font-size: 40px; line-height: 1;">${icon}</div>
+                <div class="nav-item-icon" style="font-size: 40px; line-height: 1; filter: ${themeFilter};">${icon}</div>
                 <div class="nav-item-name" style="font-size: 13px; font-weight: 600; text-align: center; color: var(--text-main); word-break: break-word;">${child.name}</div>
               </div>
             `;

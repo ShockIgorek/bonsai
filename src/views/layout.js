@@ -31,6 +31,11 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
     </div>
   `;
 
+  // Обработчик бургер-меню (ведёт в настроения)
+  app.querySelector('.burger-menu')?.addEventListener('click', () => {
+    import('../router.js').then(m => m.showMoodsScreen());
+  });
+
   // Обработчик таб-бара
   if (showTabs) {
     app.querySelectorAll('.tab-item').forEach(btn => {

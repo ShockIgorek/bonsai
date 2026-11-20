@@ -37,16 +37,3 @@ body {
 }
 
 /* Скрываем плашку Netlify Preview (разные варианты вставки) */
-#netlify-preview-banner,
-.netlify-preview-banner,
-[data-netlify-preview-banner],
-iframe[src*="netlify"],
-div[id^="netlify"],
-div[class*="netlify"] {
-  display: none !important;
-  visibility: hidden !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  height: 0 !important;
-  width: 0 !important;
-}

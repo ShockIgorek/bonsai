@@ -1,21 +1,30 @@
 import { renderLayout } from './views/layout.js';
 import { renderThemesScreen } from './views/themes.js';
 import { renderMoodsScreen } from './views/moods.js';
+import { renderMainView } from './views/main-view.js';
 
 export function initRouter() {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // Теперь при старте показываем экран настроений (внутри каркаса с шапкой и табами)
+  // Стартуем с главного экрана (режим тиндера пока заглушка)
+  // Но если активного настроения нет — можно показать настроения (опционально)
   renderLayout({ showHeader: true, showTabs: true });
-  renderMoodsScreen();
+  renderMainView('tinder');
+}
+
+export function showMainView(mode = 'tinder') {
+  const app = document.getElementById('app');
+  if (!app) return;
+
+  renderLayout({ showHeader: true, showTabs: true });
+  renderMainView(mode);
 }
 
 export function showMoodsScreen() {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // Перерисовываем каркас на всякий случай и показываем настроения
   renderLayout({ showHeader: true, showTabs: true });
   renderMoodsScreen();
 }
@@ -24,7 +33,6 @@ export function showThemesScreen(options) {
   const app = document.getElementById('app');
   if (!app) return;
 
-  // Экран тем показываем без шапки и таб-бара (или с ними, если нужно)
   renderLayout({ showHeader: true, showTabs: true });
   renderThemesScreen(options);
 }

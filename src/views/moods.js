@@ -82,6 +82,6 @@ export function renderMoodsScreen() {
   });
 
   main.querySelector('.back-btn')?.addEventListener('click', () => {
-    import('./themes.js').then(m => m.renderThemesScreen());
+    import('../router.js').then(m => m.showMainView('tinder'));
   });
 }

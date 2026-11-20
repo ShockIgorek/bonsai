@@ -1,6 +1,6 @@
 import { buildNavIndex } from '../store.js';
 import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
-import { getMoods } from '../data/moods-store.js';
+import { getMoods, isTaskHiddenForMood } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 import { openAddTaskModal, openEditTaskModal, openDeleteTaskModal } from './task-modal.js';
 import { openTaskView } from './task-view.js';
@@ -52,16 +52,42 @@ export function renderNavView() {
   const tasksTree = getTasksTree();
   const nav = buildNavIndex(tasksTree);
 
+  // Состояние "показывать скрытые" (запоминаем в localStorage)
+  let showHidden = localStorage.getItem('bonsai-show-hidden') === 'true';
+
   // Активное настроение
   const moods = getMoods();
   const activeMoodId = localStorage.getItem('bonsai-active-mood') || 'default';
   const activeMood = moods.find(m => m.id === activeMoodId) || moods[0];
   const themeFilter = activeMood ? getThemeFilter(activeMood.theme) : 'none';
 
+  // Проверяем, видна ли задача для текущего настроения
+  // (если скрыта — false; если папка и все дети скрыты — тоже false)
+  function isVisible(nodeId) {
+    if (activeMoodId === 'default') return true; // В Норме всё видно
+    if (showHidden) return true; // Если включен режим "показать скрытые" — показываем всё
+    if (isTaskHiddenForMood(activeMoodId, nodeId)) return false;
+    const node = nav.byId.get(nodeId);
+    if (!node) return false;
+    if (node.isLeaf) return true;
+    // Для папки: если есть хоть один видимый ребёнок — показываем
+    return node.childIds.some(childId => isVisible(childId));
+  }
+
+  // Проверяем, скрыта ли папка полностью (сама или все дети)
+  function isFullyHidden(nodeId) {
+    if (activeMoodId === 'default') return false;
+    if (isTaskHiddenForMood(activeMoodId, nodeId)) return true;
+    const node = nav.byId.get(nodeId);
+    if (!node || node.isLeaf) return false;
+    // Папка скрыта, если все дети скрыты
+    return node.childIds.every(childId => isFullyHidden(childId));
+  }
+
   function render() {
     const node = nav.current;
     if (!node) return;
-    const children = nav.children;
+    const children = nav.children.filter(child => isVisible(child.id));
     const breadcrumbs = nav.breadcrumbs;
 
     // Для крошек собираем id
@@ -86,16 +112,20 @@ export function renderNavView() {
                 : `<span class="nav-crumb" data-id="${id}" style="cursor: pointer; text-decoration: underline; text-decoration-style: dotted;">${name}</span> <span style="opacity:0.5;">/</span> `;
             }).join('')}
           </div>
+          <button id="nav-toggle-hidden" style="background: var(--bg-panel); color: var(--text-main); border: 1px solid var(--border); width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Показать скрытые">👁️</button>
         </div>
 
         <div class="nav-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; overflow-y: auto; align-content: start;">
           ${children.map(child => {
             const isFolder = !child.isLeaf;
             const icon = isFolder ? '📁' : getTaskEmoji(child.name);
+            const hiddenForMood = activeMoodId !== 'default' && isFullyHidden(child.id);
+            const opacity = hiddenForMood ? '0.6' : '1';
             return `
-              <div class="nav-item" data-id="${child.id}" data-is-folder="${isFolder}" style="display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s;">
+              <div class="nav-item" data-id="${child.id}" data-is-folder="${isFolder}" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s; opacity: ${opacity};">
                 <div class="nav-item-icon" style="font-size: 40px; line-height: 1; filter: ${themeFilter};">${icon}</div>
                 <div class="nav-item-name" style="font-size: 13px; font-weight: 600; text-align: center; color: var(--text-main); word-break: break-word;">${child.name}</div>
+                ${hiddenForMood ? '<div style="position: absolute; top: 4px; left: 4px; font-size: 12px;">🙈</div>' : ''}
               </div>
             `;
           }).join('')}
@@ -146,10 +176,15 @@ export function renderNavView() {
       openAddTaskModal(node.name, () => {
         const newTree = getTasksTree();
         const newNav = buildNavIndex(newTree);
-        // Перерисовываем на том же уровне (сбрасываем на root для простоты)
-        // В будущем сделаем сохранение позиции
         renderNavView();
       });
+    });
+
+    // Кнопка "Показать/скрыть скрытые"
+    main.querySelector('#nav-toggle-hidden')?.addEventListener('click', () => {
+      showHidden = !showHidden;
+      localStorage.setItem('bonsai-show-hidden', showHidden ? 'true' : 'false');
+      render();
     });
   }
 

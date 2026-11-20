@@ -25,9 +25,24 @@ export function openMoodModal(mood, onSaved) {
       <label class="input-label">Описание</label>
       <textarea class="input-field" id="mood-desc" rows="3" placeholder="Коротко о настроении">${data.description || ''}</textarea>
 
-      <label class="input-label">Картинка (URL или локальный путь)</label>
-      <input class="input-field" id="mood-image" type="text" value="${data.image || ''}" placeholder="https://... или /assets/..." />
-      <div id="mood-image-preview" style="margin-top:8px;"></div>
+      <label class="input-label">Картинка</label>
+      
+      <input class="input-field" id="mood-image-url" type="text" value="${data.image && data.image.startsWith('http') ? data.image : ''}" placeholder="Вставь ссылку (URL) на картинку" />
+      
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span style="font-size: 12px; color: var(--text-secondary);">или</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+
+      <input type="file" id="mood-image-file" accept="image/*" capture="environment" hidden />
+      <button class="input-field" id="mood-image-btn" type="button" style="text-align: left;">
+        ${data.image && !data.image.startsWith('http') ? 'Заменить фото' : 'Загрузить фото или сделать снимок'}
+      </button>
+      
+      <div id="mood-image-preview" style="margin-top:8px;">
+        ${data.image ? `<img src="${data.image}" style="width:100%;max-height:160px;object-fit:cover;border-radius:12px;border:1px solid var(--border);" />` : ''}
+      </div>
 
       <label class="input-label">Тема оформления</label>
       <button class="input-field mood-theme-btn" id="mood-theme-btn" type="button">
@@ -46,17 +61,48 @@ export function openMoodModal(mood, onSaved) {
 
   const close = () => screen.remove();
 
-  // Превью картинки
-  const imgInput = screen.querySelector('#mood-image');
+  // Логика выбора картинки (URL или файл)
+  let currentImageData = data.image || '';
+  const imgUrlInput = screen.querySelector('#mood-image-url');
+  const imgFileInput = screen.querySelector('#mood-image-file');
+  const imgBtn = screen.querySelector('#mood-image-btn');
   const preview = screen.querySelector('#mood-image-preview');
-  const renderPreview = () => {
-    const v = imgInput.value.trim();
-    preview.innerHTML = v
-      ? `<img src="${v}" alt="preview" style="width:100%;max-height:160px;object-fit:cover;border-radius:12px;border:1px solid var(--border);" onerror="this.style.display='none'"/>`
-      : '';
-  };
-  imgInput.addEventListener('input', renderPreview);
-  renderPreview();
+
+  function updatePreview(src) {
+    if (src) {
+      preview.innerHTML = `<img src="${src}" style="width:100%;max-height:160px;object-fit:cover;border-radius:12px;border:1px solid var(--border);" />`;
+    } else {
+      preview.innerHTML = '';
+    }
+  }
+
+  // Ввод URL
+  imgUrlInput.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    currentImageData = url;
+    updatePreview(url);
+    // Если ввели URL, сбрасываем кнопку файла
+    imgBtn.textContent = 'Загрузить фото или сделать снимок';
+  });
+
+  // Клик по кнопке файла
+  imgBtn.addEventListener('click', () => imgFileInput.click());
+
+  // Выбор файла
+  imgFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      currentImageData = event.target.result;
+      updatePreview(currentImageData);
+      // Очищаем поле URL, так как выбрали файл
+      imgUrlInput.value = '';
+      imgBtn.textContent = 'Заменить фото';
+    };
+    reader.readAsDataURL(file);
+  });
 
   // Кнопка "Тема" → экран выбора тем с контекстом
   screen.querySelector('#mood-theme-btn').addEventListener('click', () => {
@@ -112,7 +158,7 @@ export function openMoodModal(mood, onSaved) {
     return {
       name: screen.querySelector('#mood-name').value.trim() || 'Без названия',
       description: screen.querySelector('#mood-desc').value.trim(),
-      image: imgInput.value.trim(),
+      image: currentImageData,
       theme: data.theme // тема меняется отдельным экраном
     };
   }

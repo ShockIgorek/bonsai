@@ -84,6 +84,7 @@ export function renderTinderView() {
 
         <!-- Карточка -->
         <div id="tinder-card" class="tinder-card" style="
+          position: relative;
           width: 100%;
           max-width: 320px;
           background: var(--bg-card);
@@ -101,6 +102,25 @@ export function renderTinderView() {
           user-select: none;
           transition: transform 0.3s ease, opacity 0.3s ease;
         ">
+          <!-- Кнопка "Открыть в проводнике" -->
+          <button id="tinder-open-in-nav" style="
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+          " title="Открыть в проводнике">📁</button>
+
           <!-- Заглушка-картинка (с фильтром темы) -->
           <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--bg-panel); display: flex; align-items: center; justify-content: center; font-size: 56px; filter: ${themeFilter}; margin-bottom: 8px;">
             🌱
@@ -269,6 +289,14 @@ export function renderTinderView() {
     }
 
     // ===== Кнопки =====
+
+    // Открыть текущую задачу в проводнике (Навигация)
+    main.querySelector('#tinder-open-in-nav')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      localStorage.setItem('bonsai-tinder-last-path', JSON.stringify(leaf.path));
+      import('../router.js').then(m => m.showMainView('navigation'));
+    });
+
     main.querySelector('#tinder-skip')?.addEventListener('click', () => {
       currentIndex++;
       render();

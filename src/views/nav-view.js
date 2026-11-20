@@ -52,6 +52,37 @@ export function renderNavView() {
   const tasksTree = getTasksTree();
   const nav = buildNavIndex(tasksTree);
 
+  // Если пришли из Тиндера — заходим в нужную папку
+  const savedPath = localStorage.getItem('bonsai-tinder-last-path');
+  if (savedPath) {
+    try {
+      const path = JSON.parse(savedPath);
+      // path — массив имён от корня до задачи. Нам нужна папка (предпоследний элемент)
+      if (path.length >= 2) {
+        const folderName = path[path.length - 2];
+        // Ищем узел с таким именем (рекурсивно)
+        function findNodeByName(nodeId, name) {
+          const node = nav.byId.get(nodeId);
+          if (!node) return null;
+          if (node.name === name) return nodeId;
+          for (const childId of node.childIds) {
+            const found = findNodeByName(childId, name);
+            if (found) return found;
+          }
+          return null;
+        }
+        const folderId = findNodeByName(nav.rootId, folderName);
+        if (folderId) {
+          nav.currentId = folderId;
+        }
+      }
+    } catch (e) {
+      console.warn('Ошибка парсинга пути из Тиндера');
+    }
+    // Очищаем, чтобы не заходить снова при каждом рендере
+    localStorage.removeItem('bonsai-tinder-last-path');
+  }
+
   // Состояние "показывать скрытые" (запоминаем в localStorage)
   let showHidden = localStorage.getItem('bonsai-show-hidden') === 'true';
 

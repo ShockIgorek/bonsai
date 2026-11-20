@@ -84,6 +84,18 @@ export function renderNavView() {
     return node.childIds.every(childId => isFullyHidden(childId));
   }
 
+  // Получаем картинку для узла: своя, или от первого ребёнка (рекурсивно)
+  function getNodeImage(nodeId, depth = 0) {
+    if (depth > 10) return ''; // защита от рекурсии
+    const node = nav.byId.get(nodeId);
+    if (!node) return '';
+    // Если есть своя картинка (в исходных данных) — берём её
+    // В nav.byId картинки нет, поэтому ищем в исходном дереве по имени
+    // Для простоты: будем хранить image в задаче, но пока его нет
+    // Пока возвращаем пустоту (заглушка)
+    return '';
+  }
+
   function render() {
     const node = nav.current;
     if (!node) return;
@@ -121,9 +133,13 @@ export function renderNavView() {
             const icon = isFolder ? '📁' : getTaskEmoji(child.name);
             const hiddenForMood = activeMoodId !== 'default' && isFullyHidden(child.id);
             const opacity = hiddenForMood ? '0.6' : '1';
+            const childCount = isFolder ? child.childIds.length : 0;
             return `
               <div class="nav-item" data-id="${child.id}" data-is-folder="${isFolder}" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s; opacity: ${opacity};">
-                <div class="nav-item-icon" style="font-size: 40px; line-height: 1; filter: ${themeFilter};">${icon}</div>
+                <div class="nav-item-icon" style="position: relative; font-size: 40px; line-height: 1; filter: ${themeFilter};">
+                  ${icon}
+                  ${isFolder ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: 800;">${childCount}</div>` : ''}
+                </div>
                 <div class="nav-item-name" style="font-size: 13px; font-weight: 600; text-align: center; color: var(--text-main); word-break: break-word;">${child.name}</div>
                 ${hiddenForMood ? '<div style="position: absolute; top: 4px; left: 4px; font-size: 12px;">🙈</div>' : ''}
               </div>

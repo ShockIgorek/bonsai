@@ -1,7 +1,7 @@
 import { buildNavIndex } from '../store.js';
 import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, hideTaskForMood, isTaskHiddenForMood } from '../data/moods-store.js';
-import { openAddSubtaskModal, openDeleteTaskModal } from './task-modal.js';
+import { openAddTaskModal, openDeleteTaskModal } from './task-modal.js';
 
 /**
  * Открывает полноэкранный экран деталей задачи.
@@ -137,9 +137,13 @@ export function openTaskView(task, onChanged) {
     });
   });
 
-  // Добавить подзадачу
+  // Добавить подзадачу (открываем полноценную модалку добавления)
   screen.querySelector('#tv-subtask')?.addEventListener('click', () => {
-    openAddSubtaskModal(task, close);
+    // Задача станет папкой, поэтому добавляем в неё (по имени)
+    openAddTaskModal(task.name, () => {
+      close();
+      if (typeof onChanged === 'function') onChanged();
+    });
   });
 
   // Удалить

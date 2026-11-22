@@ -35,6 +35,20 @@ export function openAddTaskModal(folderName, onSaved) {
       <label class="input-label">Описание</label>
       <textarea class="input-field" id="task-desc" rows="2" placeholder="Коротко о задаче"></textarea>
 
+      <!-- Тип задачи (крупные чекбоксы) -->
+      <label class="input-label">Тип задачи <span style="color: #e5484d;">*</span></label>
+      <div style="display: flex; gap: 24px;">
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 16px; color: var(--text-main);">
+          <input type="checkbox" id="type-single" style="width: 24px; height: 24px; cursor: pointer;" />
+          Одноразовая
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 16px; color: var(--text-main);">
+          <input type="checkbox" id="type-cyclic" style="width: 24px; height: 24px; cursor: pointer;" />
+          Циклическая
+        </label>
+      </div>
+      <div id="type-error" style="display: none; color: #e5484d; font-size: 12px;">Выберите тип задачи</div>
+
       <!-- Картинка -->
       <label class="input-label">Картинка (URL или файл)</label>
       <input class="input-field" id="task-image-url" type="text" placeholder="https://... или /assets/..." />
@@ -47,15 +61,15 @@ export function openAddTaskModal(folderName, onSaved) {
       <button class="input-field" id="task-image-btn" type="button" style="text-align: left;">Загрузить фото или сделать снимок</button>
       <div id="task-image-preview" style="margin-top: 8px;"></div>
 
-      <!-- Тип задачи (чекбоксы) -->
+      <!-- Тип задачи (крупные чекбоксы) -->
       <label class="input-label">Тип задачи <span style="color: #e5484d;">*</span></label>
-      <div style="display: flex; gap: 16px;">
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-main);">
-          <input type="checkbox" id="type-single" style="width: 18px; height: 18px; cursor: pointer;" />
+      <div style="display: flex; gap: 24px;">
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 16px; color: var(--text-main);">
+          <input type="checkbox" id="type-single" style="width: 24px; height: 24px; cursor: pointer;" />
           Одноразовая
         </label>
-        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-main);">
-          <input type="checkbox" id="type-cyclic" style="width: 18px; height: 18px; cursor: pointer;" />
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 16px; color: var(--text-main);">
+          <input type="checkbox" id="type-cyclic" style="width: 24px; height: 24px; cursor: pointer;" />
           Циклическая
         </label>
       </div>
@@ -443,10 +457,22 @@ export function openEditTaskModal(task, onSaved) {
 }
 
 export function openDeleteTaskModal(task, onSaved) {
-  const modal = document.createElement('div');
-  modal.className = 'modal-overlay';
-  modal.innerHTML = `
-    <div class="modal-card" role="dialog" aria-modal="true">
+  const screen = document.createElement('div');
+  screen.className = 'task-editor-screen';
+  screen.style.cssText = `
+    position: absolute;
+    inset: 0;
+    background: var(--bg-main);
+    color: var(--text-main);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    justify-content: center;
+    align-items: center;
+  `;
+  screen.innerHTML = `
+    <div class="modal-card" role="dialog" aria-modal="true" style="max-width: 90vw; width: 400px; box-sizing: border-box; margin: 16px;">
       <div class="modal-header">
         <h2 class="modal-title">Удалить задачу?</h2>
         <button class="modal-close" aria-label="Закрыть">×</button>
@@ -467,10 +493,11 @@ export function openDeleteTaskModal(task, onSaved) {
 
   const close = () => screen.remove();
 
+  screen.querySelector('.modal-close').addEventListener('click', close);
   screen.querySelector('#task-cancel').addEventListener('click', close);
-  modal.querySelector('#task-cancel').addEventListener('click', close);
+  screen.addEventListener('click', (e) => { if (e.target === screen) close(); });
 
-  modal.querySelector('#task-delete').addEventListener('click', () => {
+  screen.querySelector('#task-delete').addEventListener('click', () => {
     const tree = getTasksTree();
 
     function removeFromNode(node, targetName) {
@@ -494,38 +521,42 @@ export function openDeleteTaskModal(task, onSaved) {
   });
 }
 
-/**
- * Открывает модалку добавления подзадачи (превращает лист в папку).
- */
 export function openAddSubtaskModal(task, onSaved) {
-  const modal = document.createElement('div');
-  modal.className = 'modal-overlay';
-  modal.innerHTML = `
-    <div class="modal-card" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <h2 class="modal-title">Подзадача для «${task.name}»</h2>
-        <button class="modal-close" aria-label="Закрыть">×</button>
-      </div>
-      <div class="modal-body">
-        <label class="input-label">Название</label>
-        <input class="input-field" id="subtask-name" type="text" placeholder="Например: помыть пол" />
-        <label class="input-label">Описание</label>
-        <textarea class="input-field" id="subtask-desc" rows="2" placeholder="Коротко о задаче"></textarea>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-save" id="subtask-save">Добавить</button>
-      </div>
+  const screen = document.createElement('div');
+  screen.className = 'task-editor-screen';
+  screen.style.cssText = `
+    position: absolute;
+    inset: 0;
+    background: var(--bg-main);
+    color: var(--text-main);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  `;
+  screen.innerHTML = `
+    <div class="task-editor-header" style="display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;">
+      <button class="back-btn" id="subtask-cancel" aria-label="Назад">←</button>
+      <h1 class="task-editor-title" style="font-size: 20px; font-weight: 700; margin: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Подзадача для «${task.name}»</h1>
+      <button class="btn-save" id="subtask-save" style="padding: 8px 16px; font-size: 14px;">Добавить</button>
+    </div>
+
+    <div class="task-editor-body" style="flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box;">
+      <label class="input-label">Название</label>
+      <input class="input-field" id="subtask-name" type="text" placeholder="Например: помыть пол" />
+      <label class="input-label">Описание</label>
+      <textarea class="input-field" id="subtask-desc" rows="2" placeholder="Коротко о задаче"></textarea>
     </div>
   `;
   document.getElementById('app').appendChild(screen);
 
   const close = () => screen.remove();
 
-  screen.querySelector('#task-cancel').addEventListener('click', close);
+  screen.querySelector('#subtask-cancel').addEventListener('click', close);
 
-  modal.querySelector('#subtask-save').addEventListener('click', () => {
-    const name = modal.querySelector('#subtask-name').value.trim();
-    const desc = modal.querySelector('#subtask-desc').value.trim();
+  screen.querySelector('#subtask-save').addEventListener('click', () => {
+    const name = screen.querySelector('#subtask-name').value.trim();
+    const desc = screen.querySelector('#subtask-desc').value.trim();
     if (!name) return;
 
     const tree = getTasksTree();
@@ -533,7 +564,16 @@ export function openAddSubtaskModal(task, onSaved) {
     function findAndConvert(node, targetName) {
       if (node.name === targetName) {
         if (!node.children) node.children = [];
-        node.children.push({ name, desc });
+        node.children.push({
+          id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          name,
+          desc,
+          type: 'single',
+          priority: 5,
+          image: '',
+          duration: { estimated: 30, actual: null },
+          deadline: null
+        });
         return true;
       }
       if (node.children) {

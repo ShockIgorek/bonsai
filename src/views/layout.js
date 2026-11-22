@@ -34,9 +34,9 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
     </div>
   `;
 
-  // Обработчик бургер-меню (пока заглушка — потом будет отдельное меню)
+  // Обработчик бургер-меню (открывает меню импорта/экспорта)
   app.querySelector('.burger-menu')?.addEventListener('click', () => {
-    alert('Бургер-меню в разработке');
+    import('./burger-menu.js').then(m => m.openBurgerMenu());
   });
 
   // Обработчик клика на название настроения (toggle: в настроения / обратно)

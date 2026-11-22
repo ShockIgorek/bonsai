@@ -1,5 +1,5 @@
 import { buildNavIndex } from '../store.js';
-import { demoTree } from '../../data/demo-tree.js';
+import { getTasksTree } from '../data/tasks-store.js';
 import { getMoods, isTaskHiddenForMood, hideTaskForMood } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 
@@ -11,7 +11,7 @@ export function renderTinderView() {
   const main = document.getElementById('main-content');
   if (!main) return;
 
-  const nav = buildNavIndex(demoTree);
+  const nav = buildNavIndex(getTasksTree());
 
   // Активное настроение
   const moods = getMoods();
@@ -38,6 +38,20 @@ export function renderTinderView() {
 
   // Состояние
   let currentIndex = 0;
+
+  // Восстанавливаем позицию из localStorage (если возвращаемся)
+  const savedPathForRestore = localStorage.getItem('bonsai-tinder-last-path');
+  if (savedPathForRestore) {
+    try {
+      const pathArr = JSON.parse(savedPathForRestore);
+      const pathStr = pathArr.join(' / ');
+      const idx = leaves.findIndex(l => l.path.join(' / ') === pathStr);
+      if (idx !== -1) {
+        currentIndex = idx;
+      }
+    } catch (e) {}
+    localStorage.removeItem('bonsai-tinder-last-path');
+  }
   let startX = 0;
   let isDragging = false;
   let currentTranslate = 0;

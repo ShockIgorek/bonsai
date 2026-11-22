@@ -79,8 +79,7 @@ export function renderNavView() {
     } catch (e) {
       console.warn('Ошибка парсинга пути из Тиндера');
     }
-    // Очищаем, чтобы не заходить снова при каждом рендере
-    localStorage.removeItem('bonsai-tinder-last-path');
+    // НЕ очищаем — пусть Тиндер использует его при возврате
   }
 
   // Состояние "показывать скрытые" (запоминаем в localStorage)

@@ -127,9 +127,14 @@ export function openTaskView(task, onChanged) {
     alert('Выполнение задачи пока в разработке (заглушка)');
   });
 
-  // Редактировать (заглушка — потом подключим)
+  // Редактировать
   screen.querySelector('#tv-edit')?.addEventListener('click', () => {
-    alert('Редактирование пока в разработке (заглушка)');
+    import('./task-modal.js').then(({ openEditTaskModal }) => {
+      openEditTaskModal(task, () => {
+        close();
+        if (typeof onChanged === 'function') onChanged();
+      });
+    });
   });
 
   // Добавить подзадачу

@@ -3,7 +3,8 @@ export function buildNavIndex(root) {
   let counter = 0;
 
   function walk(node, parentId, path) {
-    const id = `n${++counter}`;
+    // Используем сохранённый id, если есть; иначе генерируем (для старых данных)
+    const id = node.id || `n${++counter}`;
     const fullPath = [...path, node.name];
     const isLeaf = !node.children || node.children.length === 0;
     

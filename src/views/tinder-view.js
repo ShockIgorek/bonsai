@@ -1,5 +1,5 @@
 import { buildNavIndex } from '../store.js';
-import { getTasksTree } from '../data/tasks-store.js';
+import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, isTaskHiddenForMood, hideTaskForMood } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 
@@ -29,15 +29,34 @@ export function renderTinderView() {
   let currentIndex = 0;
 
   const savedPathForRestore = localStorage.getItem('bonsai-tinder-last-path');
+  const savedIndexForRestore = localStorage.getItem('bonsai-tinder-restore-index');
+  
   if (savedPathForRestore) {
     try {
       const pathArr = JSON.parse(savedPathForRestore);
       const pathStr = pathArr.join(' / ');
       const idx = leaves.findIndex(l => l.path.join(' / ') === pathStr);
-      if (idx !== -1) currentIndex = idx;
+      if (idx !== -1) {
+        currentIndex = idx;
+      } else if (savedIndexForRestore) {
+        // Если путь не нашли — используем индекс
+        const fallbackIdx = parseInt(savedIndexForRestore);
+        if (!isNaN(fallbackIdx) && fallbackIdx < leaves.length) {
+          currentIndex = fallbackIdx;
+        }
+      }
     } catch (e) {}
     localStorage.removeItem('bonsai-tinder-last-path');
+    localStorage.removeItem('bonsai-tinder-restore-index');
+  } else if (savedIndexForRestore) {
+    const fallbackIdx = parseInt(savedIndexForRestore);
+    if (!isNaN(fallbackIdx) && fallbackIdx < leaves.length) {
+      currentIndex = fallbackIdx;
+    }
+    localStorage.removeItem('bonsai-tinder-restore-index');
   }
+
+
 
   let isDragging = false;
   let startX = 0;
@@ -90,6 +109,22 @@ export function renderTinderView() {
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
           " title="Открыть в проводнике">📁</button>
+          
+          <!-- Кнопка "Редактировать" (карандаш) -->
+          <button id="tinder-edit" style="
+            position: absolute;
+            top: 16px;
+            right: 64px;
+            z-index: 10;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: white;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+          " title="Редактировать задачу">✏️</button>
 
           <!-- Счётчик в левом верхнем углу -->
           <div style="position: absolute; top: 16px; left: 16px; z-index: 10; background: rgba(0,0,0,0.5); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px;">
@@ -132,6 +167,27 @@ export function renderTinderView() {
             " title="Выполнить">✅</button>
           </div>
 
+          <!-- Кнопка "Добавить фото" (если нет картинки) -->
+          ${!leaf.image ? `
+            <button id="tinder-add-photo" style="
+              position: absolute;
+              bottom: 200px;
+              left: 50%;
+              transform: translateX(-50%);
+              z-index: 20;
+              background: rgba(0,0,0,0.6);
+              border: 1px dashed rgba(255,255,255,0.5);
+              color: white;
+              padding: 10px 20px;
+              border-radius: 20px;
+              font-size: 14px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            ">📷 Добавить фото</button>
+          ` : ''}
+
           <!-- Текст (с обрезкой) -->
             <div style="background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%); padding: 16px 0 0 0;">
               <h2 style="font-size: 28px; font-weight: 800; color: white; margin: 0 0 8px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${leaf.name}</h2>
@@ -159,12 +215,11 @@ export function renderTinderView() {
         isDragging = false;
         card.style.transition = 'transform 0.3s ease-out';
         if (Math.abs(dx) > 80) {
-          // Свайп влево — назад, вправо — вперёд
-          const direction = dx > 0 ? -1 : 1;
+          // Свайп влево (dx < 0) — вперёд, вправо (dx > 0) — назад
           card.style.transform = `translateX(${dx > 0 ? 500 : -500}px)`;
           setTimeout(() => {
-            if (direction === 1 && currentIndex < leaves.length - 1) currentIndex++;
-            else if (direction === -1 && currentIndex > 0) currentIndex--;
+            if (dx < 0 && currentIndex < leaves.length - 1) currentIndex++;
+            else if (dx > 0 && currentIndex > 0) currentIndex--;
             render();
           }, 200);
         } else {
@@ -185,11 +240,10 @@ export function renderTinderView() {
         card.style.cursor = 'grab';
         card.style.transition = 'transform 0.3s ease-out';
         if (Math.abs(dx) > 80) {
-          const direction = dx > 0 ? -1 : 1;
           card.style.transform = `translateX(${dx > 0 ? 500 : -500}px)`;
           setTimeout(() => {
-            if (direction === 1 && currentIndex < leaves.length - 1) currentIndex++;
-            else if (direction === -1 && currentIndex > 0) currentIndex--;
+            if (dx < 0 && currentIndex < leaves.length - 1) currentIndex++;
+            else if (dx > 0 && currentIndex > 0) currentIndex--;
             render();
           }, 200);
         } else {
@@ -229,6 +283,63 @@ export function renderTinderView() {
         e.stopPropagation();
         localStorage.setItem('bonsai-tinder-last-path', JSON.stringify(leaf.path));
         import('../router.js').then(m => m.showMainView('navigation'));
+      };
+    }
+
+    // Редактировать (карандаш)
+    const btnEdit = main.querySelector('#tinder-edit');
+    if (btnEdit) {
+      btnEdit.onclick = (e) => {
+        e.stopPropagation();
+        // Запоминаем и путь, и индекс
+        const savedPath = JSON.stringify(leaf.path);
+        const savedIndex = currentIndex;
+        import('./task-modal.js').then(({ openEditTaskModal }) => {
+          openEditTaskModal(leaf, () => {
+            localStorage.setItem('bonsai-tinder-last-path', savedPath);
+            localStorage.setItem('bonsai-tinder-restore-index', String(savedIndex));
+            renderTinderView();
+          });
+        });
+      };
+    }
+
+    // Добавить фото
+    const btnAddPhoto = main.querySelector('#tinder-add-photo');
+    if (btnAddPhoto) {
+      btnAddPhoto.onclick = (e) => {
+        e.stopPropagation();
+        // Открываем выбор файла
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.onchange = (ev) => {
+          const file = ev.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const imageData = event.target.result;
+            // Сохраняем картинку в задачу
+            const tree = getTasksTree();
+            function addImageToNode(node, targetName) {
+              if (node.name === targetName) {
+                node.image = imageData;
+                return true;
+              }
+              if (node.children) {
+                for (const child of node.children) {
+                  if (addImageToNode(child, targetName)) return true;
+                }
+              }
+              return false;
+            }
+            addImageToNode(tree, leaf.name);
+            saveTasksTree(tree);
+            renderTinderView(); // перерисовываем
+          };
+          reader.readAsDataURL(file);
+        };
+        fileInput.click();
       };
     }
   }

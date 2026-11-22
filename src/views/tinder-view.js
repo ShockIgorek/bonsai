@@ -3,65 +3,46 @@ import { getTasksTree } from '../data/tasks-store.js';
 import { getMoods, isTaskHiddenForMood, hideTaskForMood } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 
-/**
- * Тиндер: карточки с задачами, свайпы для пролистывания,
- * кнопки "Выполнить" и "Скрыть".
- */
 export function renderTinderView() {
   const main = document.getElementById('main-content');
   if (!main) return;
 
   const nav = buildNavIndex(getTasksTree());
 
-  // Активное настроение
   const moods = getMoods();
   const activeMoodId = localStorage.getItem('bonsai-active-mood') || 'default';
   const activeMood = moods.find(m => m.id === activeMoodId) || moods[0];
   const themeFilter = activeMood ? getThemeFilter(activeMood.theme) : 'none';
-  const isNormalMode = activeMoodId === 'default'; // В "Норма" крестик не показываем
+  const isNormalMode = activeMoodId === 'default';
 
-  // Функция сбора листьев (исключая скрытые)
   function collectLeaves() {
     const result = [];
     nav.byId.forEach(node => {
-      if (node.isLeaf) {
-        if (!isTaskHiddenForMood(activeMoodId, node.id)) {
-          result.push(node);
-        }
+      if (node.isLeaf && !isTaskHiddenForMood(activeMoodId, node.id)) {
+        result.push(node);
       }
     });
     return result;
   }
 
-  // Текущий список листьев
   let leaves = collectLeaves();
-
-  // Состояние
   let currentIndex = 0;
 
-  // Восстанавливаем позицию из localStorage (если возвращаемся)
   const savedPathForRestore = localStorage.getItem('bonsai-tinder-last-path');
   if (savedPathForRestore) {
     try {
       const pathArr = JSON.parse(savedPathForRestore);
       const pathStr = pathArr.join(' / ');
       const idx = leaves.findIndex(l => l.path.join(' / ') === pathStr);
-      if (idx !== -1) {
-        currentIndex = idx;
-      }
+      if (idx !== -1) currentIndex = idx;
     } catch (e) {}
     localStorage.removeItem('bonsai-tinder-last-path');
   }
-  let startX = 0;
+
   let isDragging = false;
-  let currentTranslate = 0;
+  let startX = 0;
 
   function render() {
-    // Убираем старый обработчик клавиатуры, если был
-    if (window.__tinderCleanup) {
-      window.__tinderCleanup();
-      window.__tinderCleanup = null;
-    }
     const leaf = leaves[currentIndex];
 
     if (!leaf) {
@@ -69,271 +50,217 @@ export function renderTinderView() {
         <div style="padding: 40px 20px; text-align: center; color: var(--text-main); display: flex; flex-direction: column; height: 100%; justify-content: center;">
           <h1 style="font-size: 28px; margin-bottom: 12px;">🎉 Все задачи просмотрены!</h1>
           <p style="color: var(--text-secondary); font-size: 16px; margin-bottom: 24px;">Ты молодец.</p>
-          <button id="restart-tinder" style="
-            background: var(--accent);
-            color: var(--bg-main);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            margin: 0 auto;
-          ">
-            Начать сначала
-          </button>
+          <button id="restart-tinder" style="background: var(--accent); color: var(--bg-main); border: none; padding: 12px 24px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin: 0 auto;">Начать сначала</button>
         </div>
       `;
-      main.querySelector('#restart-tinder')?.addEventListener('click', () => {
-        currentIndex = 0;
-        render();
-      });
+      main.querySelector('#restart-tinder')?.addEventListener('click', () => { currentIndex = 0; render(); });
       return;
     }
 
-    const path = leaf.path.join(' / ');
+    const path = leaf.path.slice(0, -1).join(' / ');
 
     main.innerHTML = `
-      <div class="tinder-view" style="padding: 16px; display: flex; flex-direction: column; height: 100%; box-sizing: border-box; align-items: center; justify-content: center; position: relative;">
-
-        <!-- Карточка -->
+      <div class="tinder-view" style="position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; box-sizing: border-box;">
+        
+        <!-- Карточка на весь экран -->
         <div id="tinder-card" class="tinder-card" style="
-          position: relative;
-          width: 100%;
-          max-width: 320px;
+          position: absolute;
+          inset: 0;
           background: var(--bg-card);
-          border: 2px solid var(--border);
-          border-radius: 24px;
-          padding: 32px 20px;
-          box-sizing: border-box;
           display: flex;
           flex-direction: column;
-          align-items: center;
-          gap: 12px;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-          touch-action: pan-y;
+          justify-content: flex-end;
           cursor: grab;
           user-select: none;
-          transition: transform 0.3s ease, opacity 0.3s ease;
+          transition: transform 0.3s ease-out;
+          z-index: 1;
         ">
-          <!-- Кнопка "Открыть в проводнике" -->
+          <!-- Кнопка "Папка" в правом верхнем углу -->
           <button id="tinder-open-in-nav" style="
             position: absolute;
-            top: 12px;
-            right: 12px;
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            top: 16px;
+            right: 16px;
             z-index: 10;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: white;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
           " title="Открыть в проводнике">📁</button>
 
-          <!-- Заглушка-картинка (с фильтром темы) -->
-          <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--bg-panel); display: flex; align-items: center; justify-content: center; font-size: 56px; filter: ${themeFilter}; margin-bottom: 8px;">
+          <!-- Счётчик в левом верхнем углу -->
+          <div style="position: absolute; top: 16px; left: 16px; z-index: 10; background: rgba(0,0,0,0.5); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px;">
+            ${currentIndex + 1} / ${leaves.length}
+          </div>
+
+          <!-- Картинка (заглушка на фоне) -->
+          <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 120px; filter: ${themeFilter}; opacity: 0.3;">
             🌱
           </div>
 
-          <!-- Название -->
-          <h2 style="font-size: 22px; font-weight: 800; text-align: center; margin: 0; color: var(--text-main);">
-            ${leaf.name}
-          </h2>
+          <!-- Кнопки на фиксированной позиции (70% высоты) -->
+          <div style="position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 0 24px 24px 24px; display: flex; flex-direction: column; gap: 16px;">
+            
+            <!-- Кнопки (внутри карточки, но фиксированы по высоте) -->
+          <div style="position: absolute; bottom: 140px; left: 0; right: 0; z-index: 20; padding: 0 24px; display: flex; justify-content: space-between;">
+            <button id="tinder-hide" style="
+              background: ${isNormalMode ? 'rgba(255,255,255,0.1)' : '#e5484d'};
+              border: 2px solid ${isNormalMode ? 'rgba(255,255,255,0.2)' : '#e5484d'};
+              color: white;
+              width: 56px; height: 56px;
+              border-radius: 50%;
+              font-size: 22px;
+              cursor: pointer;
+              display: flex; align-items: center; justify-content: center;
+              opacity: ${isNormalMode ? '0.3' : '1'};
+              pointer-events: ${isNormalMode ? 'none' : 'auto'};
+            " title="Скрыть">❌</button>
 
-          <!-- Описание -->
-          ${leaf.desc ? `<p style="font-size: 14px; color: var(--text-secondary); text-align: center; margin: 0; line-height: 1.4;">${leaf.desc}</p>` : ''}
-
-          <!-- Путь -->
-          <div style="font-size: 12px; color: var(--text-muted); text-align: center;">
-            ${path}
+            <button id="tinder-complete" style="
+              background: #30a46c;
+              border: none;
+              color: white;
+              width: 56px; height: 56px;
+              border-radius: 50%;
+              font-size: 22px;
+              cursor: pointer;
+              display: flex; align-items: center; justify-content: center;
+            " title="Выполнить">✅</button>
           </div>
 
-          <!-- Приоритет (заглушка 5.0) -->
-          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-            Приоритет: 5.0 / 10.0
+          <!-- Текст (с обрезкой) -->
+            <div style="background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%); padding: 16px 0 0 0;">
+              <h2 style="font-size: 28px; font-weight: 800; color: white; margin: 0 0 8px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${leaf.name}</h2>
+              ${leaf.desc ? `<p style="font-size: 15px; color: rgba(255,255,255,0.9); margin: 0 0 8px 0; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${leaf.desc}</p>` : ''}
+              <div style="font-size: 13px; color: rgba(255,255,255,0.6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${path}</div>
+            </div>
           </div>
         </div>
 
-        <!-- Кнопки -->
-        <div style="display: flex; gap: 16px; margin-top: 24px; align-items: center;">
-          <!-- Скрыть (крестик) — только не в Норме -->
-          ${!isNormalMode ? `
-          <button id="tinder-hide" style="
-            background: var(--bg-panel);
-            border: 2px solid var(--border);
-            color: #e5484d;
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            font-size: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          " title="Скрыть для этого настроения">❌</button>
-          ` : ''}
-
-          <!-- Выполнить (галочка) -->
-          <button id="tinder-complete" style="
-            background: var(--bg-panel);
-            border: 2px solid var(--border);
-            color: #30a46c;
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            font-size: 26px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          " title="Выполнить">✅</button>
-
-          <!-- Пропустить (листнуть) -->
-          <button id="tinder-skip" style="
-            background: var(--bg-panel);
-            border: 2px solid var(--border);
-            color: var(--text-muted);
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            font-size: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          " title="Пропустить">⏭️</button>
-        </div>
-
-        <div style="font-size: 12px; color: var(--text-muted); margin-top: 16px;">
-          ${currentIndex + 1} из ${leaves.length}
-        </div>
       </div>
     `;
 
-    // ===== Свайпы (touch/mouse) =====
+    // ===== Свайпы (без поворотов) =====
     const card = main.querySelector('#tinder-card');
     if (card) {
-      // Touch
-      card.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-        isDragging = true;
-      });
+      card.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = true; });
       card.addEventListener('touchmove', (e) => {
         if (!isDragging) return;
         const dx = e.touches[0].clientX - startX;
-        card.style.transform = `translateX(${dx}px) rotate(${dx / 20}deg)`;
+        card.style.transform = `translateX(${dx}px)`;
       });
       card.addEventListener('touchend', (e) => {
         if (!isDragging) return;
         const dx = e.changedTouches[0].clientX - startX;
         isDragging = false;
-        card.style.transition = 'transform 0.3s ease';
+        card.style.transition = 'transform 0.3s ease-out';
         if (Math.abs(dx) > 80) {
-          // Свайп влево/вправо — просто листаем
-          card.style.transform = `translateX(${dx > 0 ? 400 : -400}px) rotate(${dx > 0 ? 20 : -20}deg)`;
+          // Свайп влево — назад, вправо — вперёд
+          const direction = dx > 0 ? -1 : 1;
+          card.style.transform = `translateX(${dx > 0 ? 500 : -500}px)`;
           setTimeout(() => {
-            currentIndex++;
+            if (direction === 1 && currentIndex < leaves.length - 1) currentIndex++;
+            else if (direction === -1 && currentIndex > 0) currentIndex--;
             render();
           }, 200);
         } else {
-          // Возвращаем на место
-          card.style.transform = 'translateX(0) rotate(0)';
+          card.style.transform = 'translateX(0)';
         }
       });
 
-      // Mouse (для ПК)
-      card.addEventListener('mousedown', (e) => {
-        startX = e.clientX;
-        isDragging = true;
-        card.style.cursor = 'grabbing';
-      });
+      card.addEventListener('mousedown', (e) => { startX = e.clientX; isDragging = true; card.style.cursor = 'grabbing'; });
       window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         const dx = e.clientX - startX;
-        card.style.transform = `translateX(${dx}px) rotate(${dx / 20}deg)`;
+        card.style.transform = `translateX(${dx}px)`;
       });
       window.addEventListener('mouseup', (e) => {
         if (!isDragging) return;
         const dx = e.clientX - startX;
         isDragging = false;
         card.style.cursor = 'grab';
-        card.style.transition = 'transform 0.3s ease';
+        card.style.transition = 'transform 0.3s ease-out';
         if (Math.abs(dx) > 80) {
-          card.style.transform = `translateX(${dx > 0 ? 400 : -400}px) rotate(${dx > 0 ? 20 : -20}deg)`;
+          const direction = dx > 0 ? -1 : 1;
+          card.style.transform = `translateX(${dx > 0 ? 500 : -500}px)`;
           setTimeout(() => {
-            currentIndex++;
+            if (direction === 1 && currentIndex < leaves.length - 1) currentIndex++;
+            else if (direction === -1 && currentIndex > 0) currentIndex--;
             render();
           }, 200);
         } else {
-          card.style.transform = 'translateX(0) rotate(0)';
+          card.style.transform = 'translateX(0)';
         }
       });
 
-      // Стрелки клавиатуры (для ПК)
-      const keyHandler = (e) => {
-        if (e.key === 'ArrowLeft') {
-          card.style.transform = 'translateX(-400px) rotate(-20deg)';
-          card.style.opacity = '0';
-          setTimeout(() => {
-            currentIndex++;
-            render();
-          }, 300);
-        } else if (e.key === 'ArrowRight') {
-          card.style.transform = 'translateX(400px) rotate(20deg)';
-          card.style.opacity = '0';
-          setTimeout(() => {
-            currentIndex++;
-            render();
-          }, 300);
-        }
-      };
-      document.addEventListener('keydown', keyHandler);
-      
-      // Убираем обработчик при перерисовке (чтобы не плодить)
-      const cleanup = () => {
-        document.removeEventListener('keydown', keyHandler);
-      };
-      // Сохраняем cleanup в глобальной переменной для вызова при следующем рендере
-      window.__tinderCleanup = cleanup;
+      // Стрелки клавиатуры обрабатываются ГЛОБАЛЬНО (ниже), без дублей
     }
 
     // ===== Кнопки =====
+    const btnComplete = main.querySelector('#tinder-complete');
+    const btnHide = main.querySelector('#tinder-hide');
+    const btnOpenNav = main.querySelector('#tinder-open-in-nav');
 
-    // Открыть текущую задачу в проводнике (Навигация)
-    main.querySelector('#tinder-open-in-nav')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      localStorage.setItem('bonsai-tinder-last-path', JSON.stringify(leaf.path));
-      import('../router.js').then(m => m.showMainView('navigation'));
-    });
+    if (btnComplete) {
+      btnComplete.onclick = (e) => {
+        e.stopPropagation(); // не даём клику всплыть до карточки
+        console.log('КЛИК ✅, currentIndex ДО:', currentIndex);
+        if (currentIndex < leaves.length - 1) currentIndex++;
+        console.log('КЛИК ✅, currentIndex ПОСЛЕ:', currentIndex);
+        render();
+      };
+    }
 
-    main.querySelector('#tinder-skip')?.addEventListener('click', () => {
-      currentIndex++;
-      render();
-    });
+    if (btnHide) {
+      btnHide.onclick = () => {
+        hideTaskForMood(activeMoodId, leaf.id);
+        leaves = collectLeaves();
+        if (currentIndex >= leaves.length) currentIndex = Math.max(0, leaves.length - 1);
+        render();
+      };
+    }
 
-    main.querySelector('#tinder-complete')?.addEventListener('click', () => {
-      // TODO: удалить одноразовую / снизить приоритет цикличной
-      // Пока просто листаем
-      currentIndex++;
-      render();
-    });
-
-    main.querySelector('#tinder-hide')?.addEventListener('click', () => {
-      hideTaskForMood(activeMoodId, leaf.id);
-      // Пересобираем список (задача исчезла)
-      leaves = collectLeaves();
-      // Если текущий индекс вышел за пределы — сбрасываем на последний
-      if (currentIndex >= leaves.length) {
-        currentIndex = Math.max(0, leaves.length - 1);
-      }
-      render();
-    });
+    if (btnOpenNav) {
+      btnOpenNav.onclick = (e) => {
+        e.stopPropagation();
+        localStorage.setItem('bonsai-tinder-last-path', JSON.stringify(leaf.path));
+        import('../router.js').then(m => m.showMainView('navigation'));
+      };
+    }
   }
+
+  // Глобальный обработчик стрелок (один раз)
+  const globalKeyHandler = (e) => {
+    if (e.key === 'ArrowLeft') {
+      const card = document.querySelector('#tinder-card');
+      if (card) {
+        card.style.transform = 'translateX(-500px)';
+        setTimeout(() => {
+          if (currentIndex > 0) currentIndex--;
+          render();
+        }, 300);
+      }
+    } else if (e.key === 'ArrowRight') {
+      const card = document.querySelector('#tinder-card');
+      if (card) {
+        card.style.transform = 'translateX(500px)';
+        setTimeout(() => {
+          if (currentIndex < leaves.length - 1) currentIndex++;
+          render();
+        }, 300);
+      }
+    }
+  };
+  
+  // Удаляем старый глобальный обработчик, если был
+  if (window.__tinderGlobalKey) {
+    document.removeEventListener('keydown', window.__tinderGlobalKey);
+  }
+  document.addEventListener('keydown', globalKeyHandler);
+  window.__tinderGlobalKey = globalKeyHandler;
 
   render();
 }

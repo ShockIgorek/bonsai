@@ -160,14 +160,24 @@ export function renderNavView() {
         <div class="nav-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 16px; overflow-y: auto; align-content: start;">
           ${children.map(child => {
             const isFolder = !child.isLeaf;
-            const icon = isFolder ? '📁' : getTaskEmoji(child.name);
             const hiddenForMood = activeMoodId !== 'default' && isFullyHidden(child.id);
             const opacity = hiddenForMood ? '0.6' : '1';
             const childCount = isFolder ? child.childIds.length : 0;
+            
+            // Иконка: картинка (если есть), эмодзи или папка
+            let iconHtml = '';
+            if (child.image) {
+              iconHtml = `<img src="${child.image}" alt="" style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px; filter: ${themeFilter};" />`;
+            } else if (isFolder) {
+              iconHtml = '📁';
+            } else {
+              iconHtml = getTaskEmoji(child.name);
+            }
+            
             return `
               <div class="nav-item" data-id="${child.id}" data-is-folder="${isFolder}" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s; opacity: ${opacity};">
                 <div class="nav-item-icon" style="position: relative; font-size: 40px; line-height: 1; filter: ${themeFilter};">
-                  ${icon}
+                  ${iconHtml}
                   ${isFolder ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: 800;">${childCount}</div>` : ''}
                 </div>
                 <div class="nav-item-name" style="font-size: 13px; font-weight: 600; text-align: center; color: var(--text-main); word-break: break-word;">${child.name}</div>

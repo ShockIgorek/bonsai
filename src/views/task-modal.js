@@ -35,6 +35,18 @@ export function openAddTaskModal(folderName, onSaved) {
       <label class="input-label">Описание</label>
       <textarea class="input-field" id="task-desc" rows="2" placeholder="Коротко о задаче"></textarea>
 
+      <!-- Картинка -->
+      <label class="input-label">Картинка (URL или файл)</label>
+      <input class="input-field" id="task-image-url" type="text" placeholder="https://... или /assets/..." />
+      <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0;">
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+        <span style="font-size: 12px; color: var(--text-secondary);">или</span>
+        <div style="flex: 1; height: 1px; background: var(--border);"></div>
+      </div>
+      <input type="file" id="task-image-file" accept="image/*" capture="environment" hidden />
+      <button class="input-field" id="task-image-btn" type="button" style="text-align: left;">Загрузить фото или сделать снимок</button>
+      <div id="task-image-preview" style="margin-top: 8px;"></div>
+
       <!-- Тип задачи (чекбоксы) -->
       <label class="input-label">Тип задачи <span style="color: #e5484d;">*</span></label>
       <div style="display: flex; gap: 16px;">
@@ -94,6 +106,39 @@ export function openAddTaskModal(folderName, onSaved) {
   const singleFields = screen.querySelector('#task-single-fields');
   const priorityDisplay = screen.querySelector('#priority-value');
   let priorityValue = 5.0;
+
+  // Логика картинки
+  let currentImageData = '';
+  const imgUrlInput = screen.querySelector('#task-image-url');
+  const imgFileInput = screen.querySelector('#task-image-file');
+  const imgBtn = screen.querySelector('#task-image-btn');
+  const imgPreview = screen.querySelector('#task-image-preview');
+
+  function updateImgPreview(src) {
+    imgPreview.innerHTML = src
+      ? `<img src="${src}" style="width: 100%; max-height: 160px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border);" onerror="this.style.display='none'" />`
+      : '';
+  }
+
+  imgUrlInput.addEventListener('input', (e) => {
+    const url = e.target.value.trim();
+    currentImageData = url;
+    updateImgPreview(url);
+  });
+
+  imgBtn.addEventListener('click', () => imgFileInput.click());
+
+  imgFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      currentImageData = event.target.result;
+      updateImgPreview(currentImageData);
+      imgUrlInput.value = '';
+    };
+    reader.readAsDataURL(file);
+  });
 
   // Приоритет
   screen.querySelector('#priority-minus').addEventListener('click', () => {
@@ -165,6 +210,7 @@ export function openAddTaskModal(folderName, onSaved) {
 
     const taskData = {
       name, desc, type, priority,
+      image: currentImageData,
       duration: { estimated: durationEst, actual: null },
       ...(type === 'cyclic' ? { interval: { totalMinutes: intervalTotalMinutes } } : { deadline: screen.querySelector('#task-deadline').value || null })
     };

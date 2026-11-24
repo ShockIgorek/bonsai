@@ -62,18 +62,7 @@ export function openAddTaskModal(folderName, onSaved) {
       <div id="task-image-preview" style="margin-top: 8px;"></div>
 
       <!-- Тип задачи (крупные чекбоксы) -->
-      <label class="input-label">Тип задачи <span style="color: #e5484d;">*</span></label>
-      <div style="display: flex; gap: 24px;">
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 16px; color: var(--text-main);">
-          <input type="checkbox" id="type-single" style="width: 24px; height: 24px; cursor: pointer;" />
-          Одноразовая
-        </label>
-        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 16px; color: var(--text-main);">
-          <input type="checkbox" id="type-cyclic" style="width: 24px; height: 24px; cursor: pointer;" />
-          Циклическая
-        </label>
-      </div>
-      <div id="type-error" style="display: none; color: #e5484d; font-size: 12px;">Выберите тип задачи</div>
+      
 
       <!-- Поля для циклической -->
       <div id="task-cyclic-fields" style="display: none; flex-direction: column; gap: 8px;">

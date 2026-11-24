@@ -2,6 +2,14 @@ import { buildNavIndex } from '../store.js';
 import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, isTaskHiddenForMood, hideTaskForMood } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
+import { ICONS } from '../utils/icons.js';
+import { formatInterval } from '../utils/format-time.js';
+
+// Стиль для SVG в кнопках (больше)
+const style = document.createElement('style');
+style.textContent = '.tinder-card button svg { width: 40px; height: 40px; }';
+document.head.appendChild(style);
+import { archiveTask, logCompletion } from '../data/archive-store.js';
 
 export function renderTinderView() {
   const main = document.getElementById('main-content');
@@ -108,7 +116,7 @@ export function renderTinderView() {
             font-size: 20px;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-          " title="Открыть в проводнике">📁</button>
+          " title="Открыть в проводнике">${ICONS.folder}</button>
           
           <!-- Кнопка "Редактировать" (карандаш) -->
           <button id="tinder-edit" style="
@@ -124,7 +132,7 @@ export function renderTinderView() {
             font-size: 18px;
             cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-          " title="Редактировать задачу">✏️</button>
+          " title="Редактировать задачу">${ICONS.edit}</button>
 
           <!-- Счётчик в левом верхнем углу -->
           <div style="position: absolute; top: 16px; left: 16px; z-index: 10; background: rgba(0,0,0,0.5); color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px;">
@@ -141,30 +149,30 @@ export function renderTinderView() {
           <div style="position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 0 24px 24px 24px; display: flex; flex-direction: column; gap: 16px;">
             
             <!-- Кнопки (внутри карточки, но фиксированы по высоте) -->
-          <div style="position: absolute; bottom: 140px; left: 0; right: 0; z-index: 20; padding: 0 24px; display: flex; justify-content: space-between;">
+          <div style="position: absolute; bottom: 155px; left: 0; right: 0; z-index: 20; padding: 0 24px; display: flex; justify-content: space-around;">
             <button id="tinder-hide" style="
               background: ${isNormalMode ? 'rgba(255,255,255,0.1)' : '#e5484d'};
-              border: 2px solid ${isNormalMode ? 'rgba(255,255,255,0.2)' : '#e5484d'};
+              border: 3px solid ${isNormalMode ? 'rgba(255,255,255,0.2)' : '#e5484d'};
               color: white;
-              width: 56px; height: 56px;
+              width: 70px; height: 70px;
               border-radius: 50%;
-              font-size: 22px;
-              cursor: pointer;
+              font-size: 24px;
+              cursor: ${isNormalMode ? 'not-allowed' : 'pointer'};
               display: flex; align-items: center; justify-content: center;
               opacity: ${isNormalMode ? '0.3' : '1'};
               pointer-events: ${isNormalMode ? 'none' : 'auto'};
-            " title="Скрыть">❌</button>
+            " title="Скрыть">${ICONS.x}</button>
 
             <button id="tinder-complete" style="
-              background: #30a46c;
-              border: none;
+              background: var(--accent);
+              border: 3px solid var(--accent);
               color: white;
-              width: 56px; height: 56px;
+              width: 70px; height: 70px;
               border-radius: 50%;
-              font-size: 22px;
+              font-size: 24px;
               cursor: pointer;
               display: flex; align-items: center; justify-content: center;
-            " title="Выполнить">✅</button>
+            " title="Выполнить">${ICONS.check}</button>
           </div>
 
           <!-- Кнопка "Добавить фото" (если нет картинки) -->
@@ -192,6 +200,16 @@ export function renderTinderView() {
             <div style="background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%); padding: 16px 0 0 0;">
               <h2 style="font-size: 28px; font-weight: 800; color: white; margin: 0 0 8px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${leaf.name}</h2>
               ${leaf.desc ? `<p style="font-size: 15px; color: rgba(255,255,255,0.9); margin: 0 0 8px 0; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${leaf.desc}</p>` : ''}
+              
+              <!-- Тип задачи и приоритет (SVG) -->
+              <div style="display: flex; gap: 12px; margin-top: 8px; font-size: 14px; color: var(--text-secondary); align-items: center;">
+                <span style="display: flex; align-items: center; gap: 4px; width: 20px; height: 20px;">
+                  ${leaf.type === 'cyclic' ? ICONS.cyclic : ICONS.single}
+                </span>
+                <span>⭐ ${leaf.priority !== undefined ? leaf.priority.toFixed(1) : '5.0'}</span>
+                ${leaf.deadline ? `<span style="color: var(--accent);">📅 ${leaf.deadline}</span>` : ''}
+                ${leaf.interval ? `<span style="color: var(--accent);">⏱️ ${formatInterval(leaf.interval.totalMinutes)}</span>` : ''}
+              </div>
               <div style="font-size: 13px; color: rgba(255,255,255,0.6); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${path}</div>
             </div>
           </div>
@@ -261,11 +279,41 @@ export function renderTinderView() {
 
     if (btnComplete) {
       btnComplete.onclick = (e) => {
-        e.stopPropagation(); // не даём клику всплыть до карточки
-        console.log('КЛИК ✅, currentIndex ДО:', currentIndex);
-        if (currentIndex < leaves.length - 1) currentIndex++;
-        console.log('КЛИК ✅, currentIndex ПОСЛЕ:', currentIndex);
-        render();
+        e.stopPropagation();
+
+        // Логируем выполнение
+        logCompletion(leaf, activeMoodId);
+
+        if (leaf.type === 'single') {
+          // Одноразовая: архивируем и удаляем из дерева
+          archiveTask(leaf, activeMoodId);
+
+          const tree = getTasksTree();
+          function removeFromNode(node, targetName) {
+            if (node.children) {
+              const idx = node.children.findIndex(c => c.name === targetName);
+              if (idx !== -1) {
+                node.children.splice(idx, 1);
+                return true;
+              }
+              for (const child of node.children) {
+                if (removeFromNode(child, targetName)) return true;
+              }
+            }
+            return false;
+          }
+          removeFromNode(tree, leaf.name);
+          saveTasksTree(tree);
+
+          // Пересобираем листья и перерисовываем
+          leaves = collectLeaves();
+          if (currentIndex >= leaves.length) currentIndex = Math.max(0, leaves.length - 1);
+          render();
+        } else {
+          // Циклическая: пока просто листаем (следующим шагом сделаем КД)
+          if (currentIndex < leaves.length - 1) currentIndex++;
+          render();
+        }
       };
     }
 

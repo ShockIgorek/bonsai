@@ -1,4 +1,5 @@
 import { getMoods } from '../data/moods-store.js';
+import { ICONS } from '../utils/icons.js';
 
 export function renderLayout({ showTabs = true, showHeader = true } = {}) {
   const app = document.getElementById('app');
@@ -26,9 +27,9 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
 
       ${showTabs ? `
       <nav class="tab-bar">
-        <button class="tab-item ${currentMode === 'tinder' ? 'active' : ''}" data-view="tinder">🔥</button>
-        <button class="tab-item ${currentMode === 'navigation' ? 'active' : ''}" data-view="navigation">📁</button>
-        <button class="tab-item ${currentMode === 'list' ? 'active' : ''}" data-view="list">📋</button>
+        <button class="tab-item ${currentMode === 'tinder' ? 'active' : ''}" data-view="tinder">${ICONS.tinder}</button>
+        <button class="tab-item ${currentMode === 'navigation' ? 'active' : ''}" data-view="navigation">${ICONS.navigation}</button>
+        <button class="tab-item ${currentMode === 'list' ? 'active' : ''}" data-view="list">${ICONS.list}</button>
       </nav>
       ` : ''}
     </div>

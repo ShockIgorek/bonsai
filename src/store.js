@@ -19,6 +19,7 @@ export function buildNavIndex(root) {
       deadline: node.deadline || null,
       interval: node.interval || null,
       series: node.series || 0,
+      ref: node,
       parentId,
       path: fullPath,
       isLeaf,

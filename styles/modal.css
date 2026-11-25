@@ -107,3 +107,24 @@
 }
 
 .btn-save:hover { filter: brightness(1.1); }
+
+/* Выбор фото поверх редактора задачи */
+.image-picker-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2500;
+  background: color-mix(in srgb, var(--bg-main) 75%, transparent);
+}
+
+.image-picker-option {
+  width: 100%;
+  text-align: left;
+  background: var(--bg-panel);
+  color: var(--text-main);
+}
+
+.image-picker-danger {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}

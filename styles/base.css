@@ -39,4 +39,21 @@ body {
   background: var(--accent);
 }
 
-/* Скрываем плашку Netlify Preview (разные варианты вставки) */
+/* Best-effort: скрываем служебные оверлеи Netlify (Deploy Preview / бейдж) */
+div[id^="netlify"],
+div[class*="netlify"],
+netlify-drawer,
+netlify-badge,
+netlify-toolbar,
+[data-netlify-drawer],
+[data-netlify-preview-banner],
+[data-netlify-badge],
+iframe[src*="netlify"],
+iframe[id*="netlify"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}

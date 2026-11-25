@@ -204,8 +204,8 @@
 
 .mood-active-badge {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  top: 8px;
+  left: 8px;
   width: 24px;
   height: 24px;
   background: var(--accent);
@@ -235,4 +235,25 @@
   padding: 12px 14px;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.mood-priority-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.mood-priority-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-main);
 }

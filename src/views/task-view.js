@@ -1,6 +1,7 @@
 import { buildNavIndex } from '../store.js';
 import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, hideTaskForMood, isTaskHiddenForMood } from '../data/moods-store.js';
+import { createPriorityResolver } from '../data/mood-priorities.js';
 import { openAddTaskModal, openDeleteTaskModal } from './task-modal.js';
 
 /**
@@ -16,7 +17,7 @@ export function openTaskView(task, onChanged) {
     inset: 0;
     background: var(--bg-main);
     color: var(--text-main);
-    z-index: 1000;
+    z-index: 2000;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -29,6 +30,8 @@ export function openTaskView(task, onChanged) {
   const isNormal = activeMoodId === 'default';
   const isHidden = isTaskHiddenForMood(activeMoodId, task.id);
   const isFolder = !task.isLeaf;
+  const nav = buildNavIndex(getTasksTree());
+  const priority = createPriorityResolver(nav, activeMoodId).resolve(task.id);
 
   screen.innerHTML = `
     <div class="task-view-header" style="display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;">
@@ -58,7 +61,10 @@ export function openTaskView(task, onChanged) {
       <div style="display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border);">
         <div style="display: flex; justify-content: space-between;">
           <span style="color: var(--text-secondary);">Приоритет</span>
-          <span style="font-weight: 600;">5.0 / 10.0 <span style="font-size: 11px; color: var(--text-muted);">(заглушка)</span></span>
+          <span style="font-weight: 600;">
+            ${priority.toFixed(1)} / 10.0
+            ${isFolder ? '<span style="font-size: 11px; color: var(--text-muted);">(среднее по подзадачам)</span>' : ''}
+          </span>
         </div>
         <div style="display: flex; justify-content: space-between;">
           <span style="color: var(--text-secondary);">Тип</span>

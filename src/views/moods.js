@@ -23,7 +23,8 @@ export function renderMoodsScreen() {
           const isActive = m.id === activeMoodId;
           const theme = m.theme || 'bonsai';
           const filter = getThemeFilter(theme);
-          
+          const hasPriorities = m.priorities && Object.keys(m.priorities).length > 0;
+
           return `
           <div class="mood-card ${isActive ? 'is-active' : ''}" data-mood="${m.id}" data-theme="${theme}" role="button" tabindex="0">
             
@@ -36,6 +37,9 @@ export function renderMoodsScreen() {
             <div class="mood-info">
               <span class="mood-name">${m.name}</span>
               ${m.description ? `<span class="mood-desc">${m.description}</span>` : ''}
+              <button class="mood-priority-btn" type="button" data-priority="${m.id}">
+                ${hasPriorities ? 'Пересмотреть приоритеты' : 'Расставить приоритеты'}
+              </button>
             </div>
 
             <button class="edit-mood-btn" data-edit="${m.id}" aria-label="Редактировать">✏️</button>
@@ -56,7 +60,7 @@ export function renderMoodsScreen() {
 
   main.querySelectorAll('.mood-card:not(.add-mood)').forEach(card => {
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.edit-mood-btn')) return;
+      if (e.target.closest('.edit-mood-btn') || e.target.closest('.mood-priority-btn')) return;
       const moodId = card.dataset.mood;
       const mood = moods.find(m => m.id === moodId);
       if (!mood) return;
@@ -74,6 +78,15 @@ export function renderMoodsScreen() {
       e.stopPropagation();
       const mood = moods.find(m => m.id === btn.dataset.edit);
       if (mood) openMoodModal(mood, renderMoodsScreen);
+    });
+  });
+
+  main.querySelectorAll('.mood-priority-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const mood = moods.find(m => m.id === btn.dataset.priority);
+      if (!mood) return;
+      import('./priority-test.js').then(module => module.openPriorityTest(mood, renderMoodsScreen));
     });
   });
 

@@ -6,6 +6,7 @@ import { ICONS } from '../utils/icons.js';
 import { formatInterval } from '../utils/format-time.js';
 import { DEMO_SERIES_ENABLED, SERIES_SEGMENTS, getDemoSeries } from '../utils/demo-series.js';
 import { archiveTask, logCompletion } from '../data/archive-store.js';
+import { createPriorityResolver } from '../data/mood-priorities.js';
 
 // Стили для SVG внутри карточки
 const style = document.createElement('style');
@@ -78,6 +79,7 @@ export function renderTinderView() {
   const activeMood = moods.find(m => m.id === activeMoodId) || moods[0];
   const themeFilter = activeMood ? getThemeFilter(activeMood.theme) : 'none';
   const isNormalMode = activeMoodId === 'default';
+  let priorityResolver = createPriorityResolver(nav, activeMoodId);
 
   function collectLeaves() {
     const result = [];
@@ -134,6 +136,7 @@ export function renderTinderView() {
     const path = leaf.path.slice(0, -1).join(' / ');
     const series = DEMO_SERIES_ENABLED ? getDemoSeries(leaf.id) : (leaf.series || 0);
     const showSeries = DEMO_SERIES_ENABLED || leaf.type === 'cyclic';
+    const leafPriority = priorityResolver.resolve(leaf.id);
 
     main.innerHTML = `
       <div class="tinder-view" style="position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; background: var(--bg-main);">
@@ -166,7 +169,7 @@ export function renderTinderView() {
           <!-- Приоритет (центр, поверх картинки) -->
           <div style="position: absolute; top: 16px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 10; pointer-events: none;">
             <button id="tinder-priority-minus" style="pointer-events: auto; background: none; border: none; color: var(--text-main); font-size: 28px; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">−</button>
-            <span id="tinder-priority-value" style="color: var(--accent); font-size: 32px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: opacity 0.3s, text-shadow 0.3s;">${leaf.priority !== undefined ? leaf.priority.toFixed(1) : '5.0'}</span>
+            <span id="tinder-priority-value" style="color: var(--accent); font-size: 32px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: opacity 0.3s, text-shadow 0.3s;">${leafPriority.toFixed(1)}</span>
             <button id="tinder-priority-plus" style="pointer-events: auto; background: none; border: none; color: var(--text-main); font-size: 28px; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">+</button>
           </div>
 
@@ -328,63 +331,53 @@ export function renderTinderView() {
       alert('Таймер в разработке');
     });
 
-    // Приоритет
+    // Приоритет (значение зависит от активного настроения)
     const priorityDisplay = main.querySelector('#tinder-priority-value');
     const priorityMinus = main.querySelector('#tinder-priority-minus');
     const priorityPlus = main.querySelector('#tinder-priority-plus');
 
-    if (priorityDisplay && priorityMinus && priorityPlus) {
-      let currentPriority = leaf.priority !== undefined ? leaf.priority : 5.0;
-
-      function updatePriorityStyle(val) {
-        if (val < 5) {
-          priorityDisplay.style.opacity = val / 5;
-          priorityDisplay.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
-        } else if (val > 5) {
-          priorityDisplay.style.opacity = 1;
-          priorityDisplay.style.textShadow = `0 0 ${(val - 5) * 4}px var(--accent), 0 2px 4px rgba(0,0,0,0.5)`;
-        } else {
-          priorityDisplay.style.opacity = 1;
-          priorityDisplay.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
-        }
+    function updatePriorityStyle(val) {
+      if (!priorityDisplay) return;
+      if (val < 5) {
+        priorityDisplay.style.opacity = val / 5;
+        priorityDisplay.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
+      } else if (val > 5) {
+        priorityDisplay.style.opacity = 1;
+        priorityDisplay.style.textShadow = `0 0 ${(val - 5) * 4}px var(--accent), 0 2px 4px rgba(0,0,0,0.5)`;
+      } else {
+        priorityDisplay.style.opacity = 1;
+        priorityDisplay.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
       }
-
-      updatePriorityStyle(currentPriority);
-
-      priorityMinus.onclick = (e) => {
-        e.stopPropagation();
-        if (currentPriority > 0) {
-          currentPriority = Math.max(0, currentPriority - 0.5);
-          priorityDisplay.textContent = currentPriority.toFixed(1);
-          updatePriorityStyle(currentPriority);
-          const tree = getTasksTree();
-          function update(node, target) {
-            if (node.name === target) { node.priority = currentPriority; return true; }
-            if (node.children) { for (const c of node.children) if (update(c, target)) return true; }
-            return false;
-          }
-          update(tree, leaf.name);
-          saveTasksTree(tree);
-        }
-      };
-
-      priorityPlus.onclick = (e) => {
-        e.stopPropagation();
-        if (currentPriority < 10) {
-          currentPriority = Math.min(10, currentPriority + 0.5);
-          priorityDisplay.textContent = currentPriority.toFixed(1);
-          updatePriorityStyle(currentPriority);
-          const tree = getTasksTree();
-          function update(node, target) {
-            if (node.name === target) { node.priority = currentPriority; return true; }
-            if (node.children) { for (const c of node.children) if (update(c, target)) return true; }
-            return false;
-          }
-          update(tree, leaf.name);
-          saveTasksTree(tree);
-        }
-      };
     }
+
+    if (priorityDisplay) {
+      updatePriorityStyle(leafPriority);
+
+      priorityMinus?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        import('./priority-compare.js').then(module => module.openPriorityCompare({
+          task: leaf,
+          moodId: activeMoodId,
+          direction: 'down',
+          onDone: refreshPriority
+        }));
+      });
+
+      priorityPlus?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        import('./priority-compare.js').then(module => module.openPriorityCompare({
+          task: leaf,
+          moodId: activeMoodId,
+          direction: 'up',
+          onDone: refreshPriority
+        }));
+      });
+    }
+  }
+
+  function refreshPriority() {
+    priorityResolver = createPriorityResolver(nav, activeMoodId);
+    render();
   }
 
   render();

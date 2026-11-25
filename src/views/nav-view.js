@@ -1,9 +1,117 @@
+import Sortable from 'sortablejs';
 import { buildNavIndex } from '../store.js';
 import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, isTaskHiddenForMood } from '../data/moods-store.js';
+import { createPriorityResolver } from '../data/mood-priorities.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
+import { ICONS } from '../utils/icons.js';
 import { openAddTaskModal, openEditTaskModal, openDeleteTaskModal } from './task-modal.js';
 import { openTaskView } from './task-view.js';
+
+const navSortStyle = document.createElement('style');
+navSortStyle.textContent = `
+  .nav-item-ghost { opacity: 0.25; }
+  .nav-item-chosen { outline: 2px solid var(--accent); outline-offset: 2px; cursor: grabbing; }
+  .nav-item-drag { opacity: 0.9; }
+  .nav-item-drop-target { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nav-crumb-drop-target { color: var(--accent) !important; }
+
+  .nav-drag-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 80px;
+    transform: translateX(-50%);
+    z-index: 200000;
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    max-width: calc(100vw - 16px);
+    padding: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    user-select: none;
+  }
+  .nav-drag-descend, .nav-drag-trash {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--bg-panel);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .nav-drag-descend {
+    flex: 1;
+    min-width: 0;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  .nav-drag-descend-disabled {
+    opacity: 0.45;
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+  .nav-drag-trash {
+    flex-shrink: 0;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+  }
+  .nav-drag-trash svg { width: 18px; height: 18px; stroke: var(--danger); flex-shrink: 0; }
+  .nav-drag-descend-active {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    background: color-mix(in srgb, var(--accent) 18%, var(--bg-panel));
+  }
+  .nav-drag-trash-active {
+    outline: 2px solid var(--danger);
+    outline-offset: 2px;
+    background: color-mix(in srgb, var(--danger) 20%, var(--bg-panel));
+  }
+`;
+document.head.appendChild(navSortStyle);
+
+let navSortable = null;
+let navDragCleanup = null;
+let navDragBar = null;
+
+function detachNavDragTracking() {
+  if (navDragCleanup) {
+    navDragCleanup();
+    navDragCleanup = null;
+  }
+}
+
+function hideNavDragBar() {
+  if (navDragBar) {
+    navDragBar.remove();
+    navDragBar = null;
+  }
+}
+
+function updateNavDragBar(folderName) {
+  const zone = navDragBar?.querySelector('.nav-drag-descend');
+  if (!zone) return;
+  zone.classList.toggle('nav-drag-descend-disabled', !folderName);
+  zone.textContent = folderName ? `↓ Спуститься в «${folderName}»` : '↓ Наведите на папку';
+}
+
+function showNavDragBar() {
+  if (navDragBar) return;
+  navDragBar = document.createElement('div');
+  navDragBar.className = 'nav-drag-bar';
+  navDragBar.innerHTML = `
+    <div class="nav-drag-descend nav-drag-descend-disabled" data-zone="descend">↓ Наведите на папку</div>
+    <div class="nav-drag-trash" data-zone="trash">${ICONS.trash}<span>Удалить</span></div>
+  `;
+  document.body.appendChild(navDragBar);
+}
 
 function getTaskEmoji(name) {
   const n = (name || '').toLowerCase();
@@ -49,8 +157,8 @@ export function renderNavView() {
   const main = document.getElementById('main-content');
   if (!main) return;
 
-  const tasksTree = getTasksTree();
-  const nav = buildNavIndex(tasksTree);
+  let tasksTree = getTasksTree();
+  let nav = buildNavIndex(tasksTree);
 
   // Если пришли из Тиндера — заходим в нужную папку
   const savedPath = localStorage.getItem('bonsai-tinder-last-path');
@@ -80,6 +188,19 @@ export function renderNavView() {
       console.warn('Ошибка парсинга пути из Тиндера');
     }
     // НЕ очищаем — пусть Тиндер использует его при возврате
+  }
+
+  // Перечитывает дерево и перерисовывает папку (по пути или текущую)
+  function reloadNav(pathOverride = null) {
+    const currentPath = pathOverride
+      || (nav.current ? JSON.stringify(nav.current.path) : null);
+    tasksTree = getTasksTree();
+    nav = buildNavIndex(tasksTree);
+    if (currentPath) {
+      const found = Array.from(nav.byId.values()).find(n => JSON.stringify(n.path) === currentPath);
+      if (found) nav.currentId = found.id;
+    }
+    render();
   }
 
   // Состояние "показывать скрытые" (запоминаем в localStorage)
@@ -127,9 +248,18 @@ export function renderNavView() {
   }
 
   function render() {
+    detachNavDragTracking();
+    hideNavDragBar();
+    if (navSortable) {
+      navSortable.destroy();
+      navSortable = null;
+    }
+
     const node = nav.current;
     if (!node) return;
     const children = nav.children.filter(child => isVisible(child.id));
+    const priorityResolver = createPriorityResolver(nav, activeMoodId);
+    let suppressClickUntil = 0;
     const breadcrumbs = nav.breadcrumbs;
 
     // Для крошек собираем id
@@ -163,11 +293,14 @@ export function renderNavView() {
             const hiddenForMood = activeMoodId !== 'default' && isFullyHidden(child.id);
             const opacity = hiddenForMood ? '0.6' : '1';
             const childCount = isFolder ? child.childIds.length : 0;
-            
+            const priority = priorityResolver.resolve(child.id);
+            const priorityOpacity = priority < 5 ? (0.4 + (priority / 5) * 0.6).toFixed(2) : '1';
+            const priorityGlow = priority > 5 ? `0 0 ${((priority - 5) * 2).toFixed(1)}px var(--accent)` : 'none';
+
             // Иконка: картинка (если есть), эмодзи или папка
             let iconHtml = '';
             if (child.image) {
-              iconHtml = `<img src="${child.image}" alt="" style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px; filter: ${themeFilter};" />`;
+              iconHtml = `<img src="${child.image}" alt="" draggable="false" style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px; filter: ${themeFilter}; pointer-events: none; -webkit-user-drag: none;" />`;
             } else if (isFolder) {
               iconHtml = '📁';
             } else {
@@ -175,19 +308,20 @@ export function renderNavView() {
             }
             
             return `
-              <div class="nav-item" data-id="${child.id}" data-is-folder="${isFolder}" style="position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s; opacity: ${opacity};">
-                <div class="nav-item-icon" style="position: relative; font-size: 40px; line-height: 1; filter: ${themeFilter};">
+              <div class="nav-item" data-id="${child.id}" data-is-folder="${isFolder}" style="position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 128px; overflow: hidden; cursor: pointer; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s; opacity: ${opacity}; user-select: none; -webkit-touch-callout: none;">
+                ${!isFolder ? `<div class="nav-item-priority" style="position: absolute; top: 6px; left: 8px; font-size: 11px; font-weight: 800; letter-spacing: 0.3px; color: var(--accent); opacity: ${priorityOpacity}; text-shadow: ${priorityGlow};">${priority.toFixed(1)}</div>` : ''}
+                <div class="nav-item-icon" style="position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 40px; line-height: 1; filter: ${themeFilter};">
                   ${iconHtml}
-                  ${isFolder ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: 800;">${childCount}</div>` : ''}
+                  ${isFolder ? `<div style="position: absolute; inset: 0; background: color-mix(in srgb, var(--bg-main) 65%, transparent); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-main); font-size: 16px; font-weight: 800;">${childCount}</div>` : ''}
                 </div>
-                <div class="nav-item-name" style="font-size: 13px; font-weight: 600; text-align: center; color: var(--text-main); word-break: break-word;">${child.name}</div>
-                ${hiddenForMood ? '<div style="position: absolute; top: 4px; left: 4px; font-size: 12px;">🙈</div>' : ''}
+                <div class="nav-item-name" style="font-size: 13px; font-weight: 600; line-height: 1.2; text-align: center; color: var(--text-main); word-break: break-word; min-height: 2.4em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${child.name}</div>
+                ${hiddenForMood ? '<div style="position: absolute; top: 4px; right: 4px; font-size: 12px;">🙈</div>' : ''}
               </div>
             `;
           }).join('')}
           
           <!-- Карточка "Добавить" (как в настроениях) -->
-          <div id="nav-add-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; padding: 12px; background: var(--bg-card); border: 2px dashed var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s; min-height: 100px;">
+          <div id="nav-add-card" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 128px; cursor: pointer; padding: 12px; background: var(--bg-card); border: 2px dashed var(--border); border-radius: 16px; transition: transform 0.15s, border-color 0.15s;">
             <div style="font-size: 40px; line-height: 1; color: var(--text-muted);">+</div>
             <div style="font-size: 13px; font-weight: 600; text-align: center; color: var(--text-secondary);">Добавить</div>
           </div>
@@ -199,6 +333,7 @@ export function renderNavView() {
     // Клик по папке/листу
     main.querySelectorAll('.nav-item').forEach(item => {
       item.addEventListener('click', () => {
+        if (Date.now() < suppressClickUntil) return;
         const id = item.dataset.id;
         const isFolder = item.dataset.isFolder === 'true';
         if (isFolder) {
@@ -206,14 +341,15 @@ export function renderNavView() {
           render();
         } else {
           const task = nav.byId.get(id);
-          openTaskView(task, () => renderNavView());
+          openTaskView(task, () => reloadNav());
         }
       });
     });
 
-    // Хлебные крошки
+    // Хлебные крошки: клик — переход
     main.querySelectorAll('.nav-crumb').forEach(crumb => {
       crumb.addEventListener('click', () => {
+        if (Date.now() < suppressClickUntil) return;
         nav.currentId = crumb.dataset.id;
         render();
       });
@@ -229,11 +365,8 @@ export function renderNavView() {
 
     // Карточка "Добавить"
     main.querySelector('#nav-add-card')?.addEventListener('click', () => {
-      openAddTaskModal(node.name, () => {
-        const newTree = getTasksTree();
-        const newNav = buildNavIndex(newTree);
-        renderNavView();
-      });
+      if (Date.now() < suppressClickUntil) return;
+      openAddTaskModal(node.name, () => reloadNav());
     });
 
     // Кнопка "Показать/скрыть скрытые"
@@ -242,6 +375,208 @@ export function renderNavView() {
       localStorage.setItem('bonsai-show-hidden', showHidden ? 'true' : 'false');
       render();
     });
+
+    // Драг-энд-дроп: только перенос в папки (сортировка отключена)
+    const grid = main.querySelector('.nav-grid');
+    if (grid) {
+      let draggedId = null;
+      let hoverFolderId = null;
+      let dropFolderEl = null;
+      let dropCrumbEl = null;
+      let dropDescendEl = null;
+      let dropTrashEl = null;
+
+      function pointFromEvent(e) {
+        const t = e?.changedTouches?.[0] || e?.touches?.[0] || e;
+        return typeof t?.clientX === 'number' ? { x: t.clientX, y: t.clientY } : null;
+      }
+
+      function resolveTargets(point) {
+        const result = { folderEl: null, crumbEl: null, descendEl: null, trashEl: null };
+        if (!point) return result;
+
+        const els = document.elementsFromPoint(point.x, point.y);
+        const overBar = navDragBar
+          && els.some(el => el === navDragBar || navDragBar.contains(el));
+
+        if (overBar) {
+          result.descendEl = els.find(el => el.classList?.contains('nav-drag-descend')) || null;
+          result.trashEl = els.find(el => el.classList?.contains('nav-drag-trash')) || null;
+          return result;
+        }
+
+        for (const el of els) {
+          if (!result.crumbEl && el.classList?.contains('nav-crumb')) {
+            result.crumbEl = el;
+          }
+          if (!result.folderEl) {
+            const item = el.closest?.('.nav-item');
+            if (item && item.dataset.isFolder === 'true' && item.dataset.id !== draggedId) {
+              result.folderEl = item;
+            }
+          }
+        }
+        return result;
+      }
+
+      function updateTargets(point) {
+        const targets = resolveTargets(point);
+
+        if (dropFolderEl !== targets.folderEl) {
+          if (dropFolderEl) dropFolderEl.classList.remove('nav-item-drop-target');
+          dropFolderEl = targets.folderEl;
+          if (dropFolderEl) dropFolderEl.classList.add('nav-item-drop-target');
+        }
+
+        if (dropCrumbEl !== targets.crumbEl) {
+          if (dropCrumbEl) dropCrumbEl.classList.remove('nav-crumb-drop-target');
+          dropCrumbEl = targets.crumbEl;
+          if (dropCrumbEl) dropCrumbEl.classList.add('nav-crumb-drop-target');
+        }
+
+        if (dropDescendEl !== targets.descendEl) {
+          if (dropDescendEl) dropDescendEl.classList.remove('nav-drag-descend-active');
+          dropDescendEl = targets.descendEl;
+        }
+        if (dropDescendEl) {
+          dropDescendEl.classList.toggle('nav-drag-descend-active', !!hoverFolderId);
+        }
+
+        if (dropTrashEl !== targets.trashEl) {
+          if (dropTrashEl) dropTrashEl.classList.remove('nav-drag-trash-active');
+          dropTrashEl = targets.trashEl;
+          if (dropTrashEl) dropTrashEl.classList.add('nav-drag-trash-active');
+        }
+
+        // Запоминаем последнюю наведённую папку — её имя показываем в зоне «Спуститься»
+        if (targets.folderEl) {
+          const folder = nav.byId.get(targets.folderEl.dataset.id);
+          if (folder) {
+            hoverFolderId = folder.id;
+            updateNavDragBar(folder.name);
+          }
+        }
+      }
+
+      function clearTargets() {
+        if (dropFolderEl) dropFolderEl.classList.remove('nav-item-drop-target');
+        if (dropCrumbEl) dropCrumbEl.classList.remove('nav-crumb-drop-target');
+        if (dropDescendEl) dropDescendEl.classList.remove('nav-drag-descend-active');
+        if (dropTrashEl) dropTrashEl.classList.remove('nav-drag-trash-active');
+        dropFolderEl = dropCrumbEl = dropDescendEl = dropTrashEl = null;
+      }
+
+      function moveIntoFolder(sourceId, targetId, openFolder = false) {
+        if (!sourceId || !targetId || sourceId === targetId) return false;
+
+        const dragged = nav.byId.get(sourceId);
+        const target = nav.byId.get(targetId);
+        if (!dragged || !target) return false;
+        if (!target.ref || !Array.isArray(target.ref.children)) return false;
+        if (dragged.parentId === targetId) return false; // уже в этой папке
+
+        // Папку нельзя положить в саму себя или в своего потомка
+        let ancestorId = target.parentId;
+        while (ancestorId) {
+          if (ancestorId === sourceId) return false;
+          ancestorId = nav.byId.get(ancestorId)?.parentId;
+        }
+
+        const parentNode = node.ref;
+        if (!parentNode || !Array.isArray(parentNode.children)) return false;
+        const index = parentNode.children.indexOf(dragged.ref);
+        if (index === -1) return false;
+
+        const targetPath = JSON.stringify(target.path);
+        parentNode.children.splice(index, 1);
+        target.ref.children.push(dragged.ref);
+
+        saveTasksTree(tasksTree);
+        setTimeout(() => reloadNav(openFolder ? targetPath : null), 0);
+        return true;
+      }
+
+      navSortable = Sortable.create(grid, {
+        animation: 150,
+        sort: false,
+        draggable: '.nav-item',
+        ghostClass: 'nav-item-ghost',
+        chosenClass: 'nav-item-chosen',
+        dragClass: 'nav-item-drag',
+        delay: 120,
+        delayOnTouchOnly: true,
+        touchStartThreshold: 4,
+        onStart: (evt) => {
+          detachNavDragTracking();
+          showNavDragBar();
+          updateNavDragBar(null);
+          clearTargets();
+          hoverFolderId = null;
+          draggedId = evt.item?.dataset?.id || null;
+
+          const handleMove = (e) => {
+            if (e.type === 'dragover') e.preventDefault();
+            const point = pointFromEvent(e);
+            if (point) updateTargets(point);
+          };
+
+          document.addEventListener('dragover', handleMove, { capture: true, passive: false });
+          document.addEventListener('pointermove', handleMove, { passive: true });
+          document.addEventListener('touchmove', handleMove, { passive: true });
+
+          navDragCleanup = () => {
+            document.removeEventListener('dragover', handleMove, true);
+            document.removeEventListener('pointermove', handleMove);
+            document.removeEventListener('touchmove', handleMove);
+          };
+        },
+        onEnd: (evt) => {
+          suppressClickUntil = Date.now() + 350;
+          draggedId = draggedId || evt.item?.dataset?.id || null;
+
+          const originalEvent = evt.originalEvent;
+          // Esc / дроп вне окна / отменённый тач — ничего не переносим
+          const canceled = (originalEvent?.type === 'dragend' && originalEvent.dropEffect === 'none')
+            || originalEvent?.type === 'touchcancel';
+          const point = pointFromEvent(originalEvent);
+          const targets = point && !canceled ? resolveTargets(point) : null;
+          const sourceId = draggedId;
+          const descendTargetId = hoverFolderId;
+
+          detachNavDragTracking();
+          hideNavDragBar();
+          clearTargets();
+          draggedId = null;
+          hoverFolderId = null;
+
+          if (!sourceId) return;
+
+          // Корзина: удаление с подтверждением
+          if (targets?.trashEl) {
+            const task = nav.byId.get(sourceId);
+            if (task) openDeleteTaskModal(task, () => reloadNav());
+            return;
+          }
+
+          // «Спуститься»: перенос внутрь папки + открытие этой папки
+          if (targets?.descendEl && descendTargetId) {
+            moveIntoFolder(sourceId, descendTargetId, true);
+            return;
+          }
+
+          // Хлебная крошка: перенос в папку-предка
+          if (targets?.crumbEl?.dataset.id) {
+            moveIntoFolder(sourceId, targets.crumbEl.dataset.id);
+            return;
+          }
+
+          // Обычный перенос в папку без открытия
+          if (targets?.folderEl?.dataset.id) {
+            moveIntoFolder(sourceId, targets.folderEl.dataset.id);
+          }
+        }
+      });
+    }
   }
 
   render();

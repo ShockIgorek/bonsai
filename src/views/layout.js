@@ -28,7 +28,7 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
       ${showTabs ? `
       <nav class="tab-bar">
         <button class="tab-item ${currentMode === 'tinder' ? 'active' : ''}" data-view="tinder">${ICONS.tinder}</button>
-        <button class="tab-item ${currentMode === 'navigation' ? 'active' : ''}" data-view="navigation">${ICONS.navigation}</button>
+        <button class="tab-item ${currentMode === 'navigation' ? 'active' : ''}" data-view="navigation">${ICONS.folder}</button>
         <button class="tab-item ${currentMode === 'list' ? 'active' : ''}" data-view="list">${ICONS.list}</button>
       </nav>
       ` : ''}

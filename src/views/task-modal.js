@@ -2,6 +2,13 @@ import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { buildNavIndex } from '../store.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
 
+function saveErrorMessage(err, subject) {
+  if (err && (err.name === 'QuotaExceededError' || err.code === 22)) {
+    return 'Не хватает места для сохранения. Уменьши или удали фото.';
+  }
+  return `Не удалось сохранить ${subject}. Попробуй ещё раз.`;
+}
+
 /**
  * Открывает модалку добавления задачи в указанную папку (по имени).
  * @param {string} folderName — имя папки, куда добавляем
@@ -237,7 +244,7 @@ export function openAddTaskModal(folderName, onSaved) {
     } catch (err) {
       saving = false;
       console.error('Не удалось сохранить задачу', err);
-      alert('Не удалось сохранить задачу. Попробуй ещё раз.');
+      alert(saveErrorMessage(err, 'задачу'));
     }
   }
 
@@ -442,7 +449,7 @@ export function openEditTaskModal(task, onSaved) {
     } catch (err) {
       saving = false;
       console.error('Не удалось сохранить задачу', err);
-      alert('Не удалось сохранить задачу. Попробуй ещё раз.');
+      alert(saveErrorMessage(err, 'задачу'));
     }
   }
 
@@ -599,7 +606,7 @@ export function openAddSubtaskModal(task, onSaved) {
     } catch (err) {
       saving = false;
       console.error('Не удалось сохранить подзадачу', err);
-      alert('Не удалось сохранить подзадачу. Попробуй ещё раз.');
+      alert(saveErrorMessage(err, 'подзадачу'));
     }
   }
 

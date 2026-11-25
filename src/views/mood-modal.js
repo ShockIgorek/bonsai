@@ -117,7 +117,9 @@ export function openMoodModal(mood, onSaved) {
     } catch (err) {
       saving = false;
       console.error('Не удалось сохранить настроение', err);
-      alert('Не удалось сохранить настроение. Попробуй ещё раз.');
+      alert(err && (err.name === 'QuotaExceededError' || err.code === 22)
+        ? 'Не хватает места для сохранения. Уменьши или удали фото.'
+        : 'Не удалось сохранить настроение. Попробуй ещё раз.');
     }
   }
 

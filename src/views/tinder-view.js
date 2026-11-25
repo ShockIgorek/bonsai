@@ -86,7 +86,12 @@ export function renderTinderView() {
     nav.byId.forEach(node => {
       if (node.isLeaf && !isTaskHiddenForMood(activeMoodId, node.id)) result.push(node);
     });
-    return result;
+
+    // Чем выше приоритет — тем раньше задача в Тиндере.
+    // При равенстве сохраняем порядок дерева (стабильная сортировка).
+    return result.sort((a, b) => (
+      priorityResolver.resolve(b.id) - priorityResolver.resolve(a.id)
+    ));
   }
 
   let leaves = collectLeaves();
@@ -376,7 +381,14 @@ export function renderTinderView() {
   }
 
   function refreshPriority() {
+    const currentId = leaves[currentIndex]?.id;
+
     priorityResolver = createPriorityResolver(nav, activeMoodId);
+    leaves = collectLeaves();
+
+    const newIndex = leaves.findIndex(leaf => leaf.id === currentId);
+    currentIndex = newIndex === -1 ? 0 : newIndex;
+
     render();
   }
 

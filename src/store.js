@@ -15,6 +15,8 @@ export function buildNavIndex(root) {
       image: node.image || '',
       type: node.type || 'single',
       priority: node.priority !== undefined ? node.priority : 5.0,
+      difficulty: node.difficulty !== undefined ? node.difficulty : 5.0,
+      timeScore: node.timeScore !== undefined ? node.timeScore : 5.0,
       duration: node.duration || { estimated: null, actual: null },
       deadline: node.deadline || null,
       interval: node.interval || null,

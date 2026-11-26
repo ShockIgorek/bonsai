@@ -3,15 +3,8 @@
 
 export const TEST_START_RATING = 1000;
 export const TEST_K_FACTOR = 32;
-export const MANUAL_K_FACTOR = 0.3;
-export const PRIORITY_MIN = 0;
-export const PRIORITY_MAX = 10;
 
 const MIN_COMPARISONS_PER_TASK = 2;
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
-}
 
 export function roundPriority(value) {
   return Math.round(value * 10) / 10;
@@ -169,51 +162,4 @@ export function finalizePrioritySession(session) {
   }
 
   return result;
-}
-
-/**
- * Ручное сравнение для кнопок +/-.
- * Работает уже с нормализованными значениями 0..10:
- * Elo-шаг меняет только пару, остальные задачи не трогаем.
- * Гарантирует, что победитель окажется выше проигравшего.
- */
-export function applyManualPriorityComparison(priorityMap, winnerId, loserId) {
-  const winner = Number(priorityMap[winnerId]);
-  const loser = Number(priorityMap[loserId]);
-  if (!Number.isFinite(winner) || !Number.isFinite(loser)) {
-    return { ...priorityMap };
-  }
-
-  // Шкала 0..10 соответствует 400 Elo-пунктам (4 пункта приоритета)
-  const expected = 1 / (1 + Math.pow(10, (loser - winner) / 4));
-  const delta = MANUAL_K_FACTOR * (1 - expected);
-
-  let nextWinner = clamp(winner + delta, PRIORITY_MIN, PRIORITY_MAX);
-  let nextLoser = clamp(loser - delta, PRIORITY_MIN, PRIORITY_MAX);
-
-  // Пользователь подтвердил, что победитель важнее — не даём значениям
-  // остаться на одном уровне или перевернуться.
-  if (nextWinner <= nextLoser) {
-    nextWinner = Math.min(PRIORITY_MAX, nextLoser + 0.1);
-    if (nextWinner <= nextLoser) {
-      nextLoser = Math.max(PRIORITY_MIN, nextWinner - 0.1);
-    }
-  }
-
-  let resultWinner = roundPriority(nextWinner);
-  let resultLoser = roundPriority(nextLoser);
-
-  // После округления до 0.1 победитель всё ещё должен быть выше
-  if (resultWinner <= resultLoser) {
-    resultWinner = Math.min(PRIORITY_MAX, roundPriority(resultLoser + 0.1));
-    if (resultWinner <= resultLoser) {
-      resultLoser = Math.max(PRIORITY_MIN, roundPriority(resultWinner - 0.1));
-    }
-  }
-
-  return {
-    ...priorityMap,
-    [winnerId]: resultWinner,
-    [loserId]: resultLoser
-  };
 }

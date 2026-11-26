@@ -3,7 +3,7 @@ import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, isTaskHiddenForMood, hideTaskForMood } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 import { ICONS } from '../utils/icons.js';
-import { formatInterval } from '../utils/format-time.js';
+import { formatInterval, formatTaskDuration } from '../utils/format-time.js';
 import { DEMO_SERIES_ENABLED, SERIES_SEGMENTS, getDemoSeries } from '../utils/demo-series.js';
 import { archiveTask, logCompletion } from '../data/archive-store.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
@@ -79,7 +79,7 @@ export function renderTinderView() {
   const activeMood = moods.find(m => m.id === activeMoodId) || moods[0];
   const themeFilter = activeMood ? getThemeFilter(activeMood.theme) : 'none';
   const isNormalMode = activeMoodId === 'default';
-  let priorityResolver = createPriorityResolver(nav, activeMoodId);
+  const priorityResolver = createPriorityResolver(nav, activeMoodId);
 
   function collectLeaves() {
     const result = [];
@@ -171,11 +171,20 @@ export function renderTinderView() {
             ` : ''}
           </div>
 
-          <!-- Приоритет (центр, поверх картинки) -->
-          <div style="position: absolute; top: 16px; left: 0; right: 0; display: flex; justify-content: center; align-items: center; gap: 12px; z-index: 10; pointer-events: none;">
-            <button id="tinder-priority-minus" style="pointer-events: auto; background: none; border: none; color: var(--text-main); font-size: 28px; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">−</button>
-            <span id="tinder-priority-value" style="color: var(--accent); font-size: 32px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: opacity 0.3s, text-shadow 0.3s;">${leafPriority.toFixed(1)}</span>
-            <button id="tinder-priority-plus" style="pointer-events: auto; background: none; border: none; color: var(--text-main); font-size: 28px; cursor: pointer; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));">+</button>
+          <!-- Метрики: время — важность — сложность -->
+          <div style="position: absolute; top: 56px; left: 0; right: 0; display: flex; justify-content: center; align-items: flex-start; gap: 22px; z-index: 10; pointer-events: none;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <span style="font-size: 24px; font-weight: 800; color: var(--text-main); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${formatTaskDuration(leaf.duration)}</span>
+              <span style="font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">время</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <span id="tinder-priority-value" style="color: var(--accent); font-size: 30px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: opacity 0.3s, text-shadow 0.3s;">${leafPriority.toFixed(1)}</span>
+              <span style="font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">важность</span>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+              <span style="font-size: 24px; font-weight: 800; color: var(--text-main); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${(Number.isFinite(leaf.difficulty) ? leaf.difficulty : 5).toFixed(1)}</span>
+              <span style="font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">сложность</span>
+            </div>
           </div>
 
           <!-- Кнопки (справа) -->
@@ -336,60 +345,20 @@ export function renderTinderView() {
       alert('Таймер в разработке');
     });
 
-    // Приоритет (значение зависит от активного настроения)
+    // Важность: только отображение. Меняется через попарный тест.
     const priorityDisplay = main.querySelector('#tinder-priority-value');
-    const priorityMinus = main.querySelector('#tinder-priority-minus');
-    const priorityPlus = main.querySelector('#tinder-priority-plus');
-
-    function updatePriorityStyle(val) {
-      if (!priorityDisplay) return;
-      if (val < 5) {
-        priorityDisplay.style.opacity = val / 5;
+    if (priorityDisplay) {
+      if (leafPriority < 5) {
+        priorityDisplay.style.opacity = leafPriority / 5;
         priorityDisplay.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
-      } else if (val > 5) {
+      } else if (leafPriority > 5) {
         priorityDisplay.style.opacity = 1;
-        priorityDisplay.style.textShadow = `0 0 ${(val - 5) * 4}px var(--accent), 0 2px 4px rgba(0,0,0,0.5)`;
+        priorityDisplay.style.textShadow = `0 0 ${(leafPriority - 5) * 4}px var(--accent), 0 2px 4px rgba(0,0,0,0.5)`;
       } else {
         priorityDisplay.style.opacity = 1;
         priorityDisplay.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
       }
     }
-
-    if (priorityDisplay) {
-      updatePriorityStyle(leafPriority);
-
-      priorityMinus?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        import('./priority-compare.js').then(module => module.openPriorityCompare({
-          task: leaf,
-          moodId: activeMoodId,
-          direction: 'down',
-          onDone: refreshPriority
-        }));
-      });
-
-      priorityPlus?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        import('./priority-compare.js').then(module => module.openPriorityCompare({
-          task: leaf,
-          moodId: activeMoodId,
-          direction: 'up',
-          onDone: refreshPriority
-        }));
-      });
-    }
-  }
-
-  function refreshPriority() {
-    const currentId = leaves[currentIndex]?.id;
-
-    priorityResolver = createPriorityResolver(nav, activeMoodId);
-    leaves = collectLeaves();
-
-    const newIndex = leaves.findIndex(leaf => leaf.id === currentId);
-    currentIndex = newIndex === -1 ? 0 : newIndex;
-
-    render();
   }
 
   render();

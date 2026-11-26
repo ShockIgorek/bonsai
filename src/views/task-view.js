@@ -2,6 +2,7 @@ import { buildNavIndex } from '../store.js';
 import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, hideTaskForMood, isTaskHiddenForMood } from '../data/moods-store.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
+import { formatTaskDuration } from '../utils/format-time.js';
 import { openAddTaskModal, openDeleteTaskModal } from './task-modal.js';
 
 /**
@@ -65,6 +66,14 @@ export function openTaskView(task, onChanged) {
             ${priority.toFixed(1)} / 10.0
             ${isFolder ? '<span style="font-size: 11px; color: var(--text-muted);">(среднее по подзадачам)</span>' : ''}
           </span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-secondary);">Время</span>
+          <span style="font-weight: 600;">${formatTaskDuration(task.duration)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-secondary);">Сложность</span>
+          <span style="font-weight: 600;">${(task.difficulty !== undefined ? task.difficulty : 5.0).toFixed(1)} / 10.0</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
           <span style="color: var(--text-secondary);">Тип</span>

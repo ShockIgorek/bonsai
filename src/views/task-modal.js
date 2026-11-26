@@ -2,6 +2,7 @@ import { getTasksTree } from '../data/tasks-store.js';
 import { buildNavIndex } from '../store.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
 import { saveTasksTreeWithRecovery, isQuotaError } from '../utils/media-compaction.js';
+import { timeToScore } from '../logic/task-metrics.js';
 
 function saveErrorMessage(err, subject) {
   if (err && (err.name === 'QuotaExceededError' || err.code === 22)) {
@@ -94,6 +95,14 @@ export function openAddTaskModal(folderName, onSaved) {
         <button type="button" id="priority-plus" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 48px; height: 48px; border-radius: 12px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
       </div>
 
+      <!-- Сложность (по центру) -->
+      <label class="input-label" style="text-align: center;">Сложность (0.0 – 10.0)</label>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 24px;">
+        <button type="button" id="difficulty-minus" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 48px; height: 48px; border-radius: 12px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">−</button>
+        <span id="difficulty-value" style="font-size: 24px; font-weight: 800; color: var(--text-main); min-width: 60px; text-align: center;">5.0</span>
+        <button type="button" id="difficulty-plus" style="background: var(--bg-panel); border: 1px solid var(--border); color: var(--text-main); width: 48px; height: 48px; border-radius: 12px; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+      </div>
+
       <label class="input-label">Время выполнения (в минутах, оценка)</label>
       <input class="input-field" id="task-duration" type="number" value="30" min="0" step="5" placeholder="Сколько времени займёт?" />
     </div>
@@ -111,7 +120,9 @@ export function openAddTaskModal(folderName, onSaved) {
   const cyclicFields = screen.querySelector('#task-cyclic-fields');
   const singleFields = screen.querySelector('#task-single-fields');
   const priorityDisplay = screen.querySelector('#priority-value');
+  const difficultyDisplay = screen.querySelector('#difficulty-value');
   let priorityValue = 5.0;
+  let difficultyValue = 5.0;
 
   // Фото: камера / галерея / ссылка через общий пикер
   let currentImageData = '';
@@ -144,6 +155,13 @@ export function openAddTaskModal(folderName, onSaved) {
   });
   screen.querySelector('#priority-plus').addEventListener('click', () => {
     if (priorityValue < 10) { priorityValue = Math.min(10, priorityValue + 0.5); priorityDisplay.textContent = priorityValue.toFixed(1); }
+  });
+
+  screen.querySelector('#difficulty-minus').addEventListener('click', () => {
+    if (difficultyValue > 0) { difficultyValue = Math.max(0, difficultyValue - 0.5); difficultyDisplay.textContent = difficultyValue.toFixed(1); }
+  });
+  screen.querySelector('#difficulty-plus').addEventListener('click', () => {
+    if (difficultyValue < 10) { difficultyValue = Math.min(10, difficultyValue + 0.5); difficultyDisplay.textContent = difficultyValue.toFixed(1); }
   });
 
   // Чекбоксы (взаимоисключающие)
@@ -219,6 +237,8 @@ export function openAddTaskModal(folderName, onSaved) {
       const taskData = {
         id: 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         name, desc, type, priority,
+        difficulty: difficultyValue,
+        timeScore: timeToScore(durationEst),
         image: currentImageData,
         duration: { estimated: durationEst, actual: null },
         ...(type === 'cyclic' ? { interval: { totalMinutes: intervalTotalMinutes } } : { deadline: screen.querySelector('#task-deadline').value || null })
@@ -338,8 +358,19 @@ export function openEditTaskModal(task, onSaved) {
         ${priorityHint}
       </div>
 
-      <label class="input-label">Время выполнения (в минутах, оценка)</label>
-      <input class="input-field" id="task-duration" type="number" value="${task.duration && task.duration.estimated ? task.duration.estimated : 30}" min="0" step="5" />
+      <label class="input-label" style="text-align: center;">Сложность (0.0 – 10.0)</label>
+      <div style="display: flex; align-items: center; justify-content: center;">
+        <span style="font-size: 24px; font-weight: 800; color: var(--text-main);">${(task.difficulty !== undefined ? task.difficulty : 5.0).toFixed(1)}</span>
+      </div>
+      <div style="font-size: 12px; color: var(--text-secondary); text-align: center; line-height: 1.4;">
+        Меняется при выполнении задачи и в тестировании.
+      </div>
+
+      <label class="input-label">Время выполнения (оценка, минуты)</label>
+      <input class="input-field" id="task-duration" type="number" value="${task.duration && task.duration.estimated ? task.duration.estimated : 30}" min="0" step="5" readonly style="opacity: 0.7;" />
+      <div style="font-size: 12px; color: var(--text-secondary); text-align: center; line-height: 1.4;">
+        Меняется замерами времени и тестированием.
+      </div>
     </div>
   `;
   document.getElementById('app').appendChild(screen);
@@ -594,6 +625,8 @@ export function openAddSubtaskModal(task, onSaved) {
             desc,
             type: 'single',
             priority: 5,
+            difficulty: 5,
+            timeScore: timeToScore(30),
             image: '',
             duration: { estimated: 30, actual: null },
             deadline: null

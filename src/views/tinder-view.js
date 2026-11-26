@@ -16,6 +16,25 @@ style.textContent = `
   .tinder-meta > span { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
   .tinder-meta svg { flex-shrink: 0; }
   .tinder-card .tinder-placeholder svg { width: 120px; height: 120px; }
+  .tinder-metric { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .tinder-metric-value {
+    display: flex;
+    align-items: center;
+    height: 34px;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1.1;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    transition: opacity 0.3s, text-shadow 0.3s;
+  }
+  .tinder-metric-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    opacity: 0.72;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
 `;
 document.head.appendChild(style);
 
@@ -142,6 +161,8 @@ export function renderTinderView() {
     const series = DEMO_SERIES_ENABLED ? getDemoSeries(leaf.id) : (leaf.series || 0);
     const showSeries = DEMO_SERIES_ENABLED || leaf.type === 'cyclic';
     const leafPriority = priorityResolver.resolve(leaf.id);
+    const leafTimeScore = Number.isFinite(leaf.timeScore) ? leaf.timeScore : 5;
+    const leafDifficulty = Number.isFinite(leaf.difficulty) ? leaf.difficulty : 5;
 
     main.innerHTML = `
       <div class="tinder-view" style="position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; background: var(--bg-main);">
@@ -173,17 +194,17 @@ export function renderTinderView() {
 
           <!-- Метрики: время — важность — сложность -->
           <div style="position: absolute; top: 56px; left: 0; right: 0; display: flex; justify-content: center; align-items: flex-start; gap: 22px; z-index: 10; pointer-events: none;">
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-              <span style="font-size: 24px; font-weight: 800; color: var(--text-main); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${formatTaskDuration(leaf.duration)}</span>
-              <span style="font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">время</span>
+            <div class="tinder-metric" style="color: color-mix(in srgb, var(--accent) 40%, var(--text-main));">
+              <span id="tinder-time-value" class="tinder-metric-value">${formatTaskDuration(leaf.duration)}</span>
+              <span class="tinder-metric-label">время</span>
             </div>
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-              <span id="tinder-priority-value" style="color: var(--accent); font-size: 30px; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: opacity 0.3s, text-shadow 0.3s;">${leafPriority.toFixed(1)}</span>
-              <span style="font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">важность</span>
+            <div class="tinder-metric" style="color: var(--accent);">
+              <span id="tinder-priority-value" class="tinder-metric-value">${leafPriority.toFixed(1)}</span>
+              <span class="tinder-metric-label">важность</span>
             </div>
-            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
-              <span style="font-size: 24px; font-weight: 800; color: var(--text-main); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${(Number.isFinite(leaf.difficulty) ? leaf.difficulty : 5).toFixed(1)}</span>
-              <span style="font-size: 9px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-secondary); text-shadow: 0 1px 2px rgba(0,0,0,0.8);">сложность</span>
+            <div class="tinder-metric" style="color: color-mix(in srgb, var(--accent) 40%, var(--text-secondary));">
+              <span id="tinder-difficulty-value" class="tinder-metric-value">${leafDifficulty.toFixed(1)}</span>
+              <span class="tinder-metric-label">сложность</span>
             </div>
           </div>
 
@@ -345,20 +366,20 @@ export function renderTinderView() {
       alert('Таймер в разработке');
     });
 
-    // Важность: только отображение. Меняется через попарный тест.
-    const priorityDisplay = main.querySelector('#tinder-priority-value');
-    if (priorityDisplay) {
-      if (leafPriority < 5) {
-        priorityDisplay.style.opacity = leafPriority / 5;
-        priorityDisplay.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
-      } else if (leafPriority > 5) {
-        priorityDisplay.style.opacity = 1;
-        priorityDisplay.style.textShadow = `0 0 ${(leafPriority - 5) * 4}px var(--accent), 0 2px 4px rgba(0,0,0,0.5)`;
-      } else {
-        priorityDisplay.style.opacity = 1;
-        priorityDisplay.style.textShadow = '0 2px 4px rgba(0,0,0,0.5)';
-      }
+    // Все три метрики визуально одинаковы: высота, прозрачность и свечение по величине.
+    function applyMetricStyle(el, value) {
+      if (!el) return;
+
+      const v = Number.isFinite(value) ? Math.max(0, Math.min(10, value)) : 5;
+      el.style.opacity = (0.45 + (v / 10) * 0.55).toFixed(2);
+      el.style.textShadow = v > 5
+        ? `0 0 ${((v - 5) * 3).toFixed(1)}px currentColor, 0 2px 4px rgba(0,0,0,0.5)`
+        : '0 2px 4px rgba(0,0,0,0.5)';
     }
+
+    applyMetricStyle(main.querySelector('#tinder-time-value'), leafTimeScore);
+    applyMetricStyle(main.querySelector('#tinder-priority-value'), leafPriority);
+    applyMetricStyle(main.querySelector('#tinder-difficulty-value'), leafDifficulty);
   }
 
   render();

@@ -1,4 +1,5 @@
 import { updateMood, addMood } from '../data/moods-store.js';
+import { saveWithMediaRecovery } from '../utils/media-compaction.js';
 
 /**
  * Открывает полноэкранный редактор настроения.
@@ -99,7 +100,7 @@ export function openMoodModal(mood, onSaved) {
   const saveBtn = screen.querySelector('[data-action="save"]');
   let saving = false;
 
-  function handleSave(e) {
+  async function handleSave(e) {
     if (e) e.preventDefault();
     if (saving) return;
     document.activeElement?.blur?.();
@@ -107,11 +108,14 @@ export function openMoodModal(mood, onSaved) {
 
     try {
       const patch = readPatch();
-      if (isEdit) {
-        updateMood(mood.id, patch);
-      } else {
-        addMood(patch);
-      }
+      const saveMood = () => {
+        if (isEdit) {
+          updateMood(mood.id, patch);
+        } else {
+          addMood(patch);
+        }
+      };
+      await saveWithMediaRecovery(saveMood);
       close();
       if (typeof onSaved === 'function') onSaved();
     } catch (err) {

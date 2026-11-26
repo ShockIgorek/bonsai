@@ -1,5 +1,4 @@
-const MAX_IMAGE_SIDE = 1200;
-const JPEG_QUALITY = 0.75;
+import { readFileAsDataUrl, compressDataUrl } from '../utils/image-compress.js';
 
 function escapeAttr(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
@@ -9,46 +8,6 @@ function escapeAttr(value) {
     '"': '&quot;',
     "'": '&#39;'
   }[ch]));
-}
-
-/**
- * Сжимает фото перед сохранением в localStorage.
- * Большие снимки с камеры иначе не влезают в квоту.
- */
-function compressImageFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(reader.error || new Error('read error'));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error('image decode error'));
-      img.onload = () => {
-        try {
-          const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
-          const width = Math.max(1, Math.round(img.naturalWidth * scale));
-          const height = Math.max(1, Math.round(img.naturalHeight * scale));
-
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-
-          const ctx = canvas.getContext('2d');
-          // Белый фон на случай прозрачного PNG
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0, width, height);
-
-          const compressed = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
-          const original = reader.result;
-          resolve(compressed.length < original.length ? compressed : original);
-        } catch (err) {
-          reject(err);
-        }
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
 }
 
 /**
@@ -107,7 +66,8 @@ export function openImagePicker(currentImage, onSelect) {
     if (!file) return;
 
     try {
-      const src = await compressImageFile(file);
+      const original = await readFileAsDataUrl(file);
+      const src = await compressDataUrl(original);
       if (!overlay.isConnected) return;
       onSelect(src);
       close();

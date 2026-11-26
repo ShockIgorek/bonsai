@@ -1,6 +1,7 @@
-import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
+import { getTasksTree } from '../data/tasks-store.js';
 import { buildNavIndex } from '../store.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
+import { saveTasksTreeWithRecovery, isQuotaError } from '../utils/media-compaction.js';
 
 function saveErrorMessage(err, subject) {
   if (err && (err.name === 'QuotaExceededError' || err.code === 22)) {
@@ -175,7 +176,7 @@ export function openAddTaskModal(folderName, onSaved) {
   const saveBtn = screen.querySelector('#task-save');
   let saving = false;
 
-  function handleSave(e) {
+  async function handleSave(e) {
     if (e) e.preventDefault();
     if (saving) return;
     document.activeElement?.blur?.();
@@ -238,7 +239,7 @@ export function openAddTaskModal(folderName, onSaved) {
         return false;
       }
       addToNode(tree, folderName);
-      saveTasksTree(tree);
+      await saveTasksTreeWithRecovery(tree);
       close();
       if (typeof onSaved === 'function') onSaved();
     } catch (err) {
@@ -397,7 +398,7 @@ export function openEditTaskModal(task, onSaved) {
   const saveBtn = screen.querySelector('#task-save');
   let saving = false;
 
-  function handleSave(e) {
+  async function handleSave(e) {
     if (e) e.preventDefault();
     if (saving) return;
     document.activeElement?.blur?.();
@@ -443,7 +444,7 @@ export function openEditTaskModal(task, onSaved) {
       }
 
       findAndUpdate(tree, task.name);
-      saveTasksTree(tree);
+      await saveTasksTreeWithRecovery(tree);
       close();
       if (typeof onSaved === 'function') onSaved();
     } catch (err) {
@@ -498,7 +499,7 @@ export function openDeleteTaskModal(task, onSaved) {
   screen.querySelector('#task-cancel').addEventListener('click', close);
   screen.addEventListener('click', (e) => { if (e.target === screen) close(); });
 
-  screen.querySelector('#task-delete').addEventListener('click', () => {
+  screen.querySelector('#task-delete').addEventListener('click', async () => {
     const tree = getTasksTree();
     const targetId = task.id;
     const targetName = task.name;
@@ -520,9 +521,17 @@ export function openDeleteTaskModal(task, onSaved) {
     }
 
     removeFromNode(tree);
-    saveTasksTree(tree);
-    close();
-    if (typeof onSaved === 'function') onSaved();
+
+    try {
+      await saveTasksTreeWithRecovery(tree);
+      close();
+      if (typeof onSaved === 'function') onSaved();
+    } catch (err) {
+      console.error('Не удалось удалить задачу', err);
+      alert(isQuotaError(err)
+        ? 'Не хватает места для сохранения. Уменьши или удали фото.'
+        : 'Не удалось удалить задачу. Попробуй ещё раз.');
+    }
   });
 }
 
@@ -562,7 +571,7 @@ export function openAddSubtaskModal(task, onSaved) {
   const saveBtn = screen.querySelector('#subtask-save');
   let saving = false;
 
-  function handleSave(e) {
+  async function handleSave(e) {
     if (e) e.preventDefault();
     if (saving) return;
     document.activeElement?.blur?.();
@@ -600,7 +609,7 @@ export function openAddSubtaskModal(task, onSaved) {
       }
 
       findAndConvert(tree, task.name);
-      saveTasksTree(tree);
+      await saveTasksTreeWithRecovery(tree);
       close();
       if (typeof onSaved === 'function') onSaved();
     } catch (err) {

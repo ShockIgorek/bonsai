@@ -3,7 +3,7 @@ import { updateHeaderMoodName } from './layout.js';
 import { openMoodModal } from './mood-modal.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 
-export function renderMoodsScreen() {
+export function renderMoodsScreen({ startup = false } = {}) {
   const main = document.getElementById('main-content');
   if (!main) return;
 
@@ -69,7 +69,14 @@ export function renderMoodsScreen() {
       document.documentElement.setAttribute('data-theme', mood.theme || 'bonsai');
       localStorage.setItem('bonsai-theme', mood.theme || 'bonsai');
       updateHeaderMoodName();
-      renderMoodsScreen();
+
+      if (startup) {
+        // При запуске выбор настроения сразу ведёт в приложение
+        const mode = localStorage.getItem('bonsai-current-mode') || 'tinder';
+        import('../router.js').then(m => m.showMainView(mode));
+      } else {
+        renderMoodsScreen();
+      }
     });
   });
 
@@ -77,7 +84,7 @@ export function renderMoodsScreen() {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const mood = moods.find(m => m.id === btn.dataset.edit);
-      if (mood) openMoodModal(mood, renderMoodsScreen);
+      if (mood) openMoodModal(mood, () => renderMoodsScreen({ startup }));
     });
   });
 
@@ -86,15 +93,25 @@ export function renderMoodsScreen() {
       e.stopPropagation();
       const mood = moods.find(m => m.id === btn.dataset.priority);
       if (!mood) return;
-      import('./priority-test.js').then(module => module.openPriorityTest(mood, renderMoodsScreen));
+      import('./priority-test.js').then(module => module.openPriorityTest(
+        mood,
+        () => renderMoodsScreen({ startup })
+      ));
     });
   });
 
   main.querySelector('.add-mood')?.addEventListener('click', () => {
-    openMoodModal(null, renderMoodsScreen);
+    openMoodModal(null, () => renderMoodsScreen({ startup }));
   });
 
   main.querySelector('.back-btn')?.addEventListener('click', () => {
-    import('../router.js').then(m => m.showMainView('tinder'));
+    const lastScreen = localStorage.getItem('bonsai-last-screen');
+    localStorage.removeItem('bonsai-last-screen');
+
+    const mode = lastScreen && lastScreen.startsWith('moods:')
+      ? lastScreen.split(':')[1]
+      : (localStorage.getItem('bonsai-current-mode') || 'tinder');
+
+    import('../router.js').then(m => m.showMainView(mode));
   });
 }

@@ -11,9 +11,10 @@ export function initRouter() {
   const savedTheme = localStorage.getItem('bonsai-theme') || 'bonsai';
   document.documentElement.setAttribute('data-theme', savedTheme);
 
-  // Стартуем с главного экрана (Тиндер)
+  // На каждом запуске начинаем с выбора настроения
+  localStorage.removeItem('bonsai-last-screen');
   renderLayout({ showHeader: true, showTabs: true });
-  renderMainView('tinder');
+  renderMoodsScreen({ startup: true });
 }
 
 export function showMainView(mode = 'tinder') {

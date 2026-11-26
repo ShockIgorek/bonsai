@@ -3,6 +3,7 @@ import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, hideTaskForMood, isTaskHiddenForMood } from '../data/moods-store.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
 import { formatTaskDuration } from '../utils/format-time.js';
+import { applyMetricStyle } from '../utils/metric-style.js';
 import { openAddTaskModal, openDeleteTaskModal } from './task-modal.js';
 
 /**
@@ -61,19 +62,19 @@ export function openTaskView(task, onChanged) {
       <!-- Инфо-блок -->
       <div style="display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border);">
         <div style="display: flex; justify-content: space-between;">
-          <span style="color: var(--text-secondary);">Приоритет</span>
-          <span style="font-weight: 600;">
+          <span style="color: var(--text-secondary);">Время</span>
+          <span data-metric="time" style="font-weight: 600; color: color-mix(in srgb, var(--accent) 40%, var(--text-main));">${formatTaskDuration(task.duration)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: var(--text-secondary);">Важность</span>
+          <span data-metric="priority" style="font-weight: 600; color: var(--accent);">
             ${priority.toFixed(1)} / 10.0
             ${isFolder ? '<span style="font-size: 11px; color: var(--text-muted);">(среднее по подзадачам)</span>' : ''}
           </span>
         </div>
         <div style="display: flex; justify-content: space-between;">
-          <span style="color: var(--text-secondary);">Время</span>
-          <span style="font-weight: 600;">${formatTaskDuration(task.duration)}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between;">
           <span style="color: var(--text-secondary);">Сложность</span>
-          <span style="font-weight: 600;">${(task.difficulty !== undefined ? task.difficulty : 5.0).toFixed(1)} / 10.0</span>
+          <span data-metric="difficulty" style="font-weight: 600; color: color-mix(in srgb, var(--accent) 40%, var(--text-secondary));">${(task.difficulty !== undefined ? task.difficulty : 5.0).toFixed(1)} / 10.0</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
           <span style="color: var(--text-secondary);">Тип</span>
@@ -113,6 +114,10 @@ export function openTaskView(task, onChanged) {
   `;
 
   document.getElementById('app').appendChild(screen);
+
+  applyMetricStyle(screen.querySelector('[data-metric="time"]'), task.timeScore);
+  applyMetricStyle(screen.querySelector('[data-metric="priority"]'), priority);
+  applyMetricStyle(screen.querySelector('[data-metric="difficulty"]'), task.difficulty);
 
   const close = () => {
     screen.remove();

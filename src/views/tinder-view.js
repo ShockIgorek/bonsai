@@ -7,6 +7,7 @@ import { formatInterval, formatTaskDuration } from '../utils/format-time.js';
 import { DEMO_SERIES_ENABLED, SERIES_SEGMENTS, getDemoSeries } from '../utils/demo-series.js';
 import { archiveTask, logCompletion } from '../data/archive-store.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
+import { applyMetricStyle } from '../utils/metric-style.js';
 
 // Стили для SVG внутри карточки
 const style = document.createElement('style');
@@ -367,16 +368,6 @@ export function renderTinderView() {
     });
 
     // Все три метрики визуально одинаковы: высота, прозрачность и свечение по величине.
-    function applyMetricStyle(el, value) {
-      if (!el) return;
-
-      const v = Number.isFinite(value) ? Math.max(0, Math.min(10, value)) : 5;
-      el.style.opacity = (0.45 + (v / 10) * 0.55).toFixed(2);
-      el.style.textShadow = v > 5
-        ? `0 0 ${((v - 5) * 3).toFixed(1)}px currentColor, 0 2px 4px rgba(0,0,0,0.5)`
-        : '0 2px 4px rgba(0,0,0,0.5)';
-    }
-
     applyMetricStyle(main.querySelector('#tinder-time-value'), leafTimeScore);
     applyMetricStyle(main.querySelector('#tinder-priority-value'), leafPriority);
     applyMetricStyle(main.querySelector('#tinder-difficulty-value'), leafDifficulty);

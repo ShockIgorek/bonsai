@@ -3,6 +3,7 @@ import { buildNavIndex } from '../store.js';
 import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, isTaskHiddenForMood } from '../data/moods-store.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
+import { metricOpacity, metricTextShadow } from '../utils/metric-style.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 import { ICONS } from '../utils/icons.js';
 import { openAddTaskModal, openEditTaskModal, openDeleteTaskModal } from './task-modal.js';
@@ -294,8 +295,8 @@ export function renderNavView() {
             const opacity = hiddenForMood ? '0.6' : '1';
             const childCount = isFolder ? child.childIds.length : 0;
             const priority = priorityResolver.resolve(child.id);
-            const priorityOpacity = priority < 5 ? (0.4 + (priority / 5) * 0.6).toFixed(2) : '1';
-            const priorityGlow = priority > 5 ? `0 0 ${((priority - 5) * 2).toFixed(1)}px var(--accent)` : 'none';
+            const priorityOpacity = metricOpacity(priority);
+            const priorityGlow = metricTextShadow(priority, 'var(--accent)');
 
             // Иконка: картинка (если есть), эмодзи или папка
             let iconHtml = '';

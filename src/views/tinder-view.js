@@ -8,6 +8,7 @@ import { createPriorityResolver } from '../data/mood-priorities.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
 import { getCooldownState, getLastCompletionAt } from '../logic/cyclic-schedule.js';
 import { getStreakSegments } from '../logic/streak.js';
+import { getMoodSorting, scoreTask } from '../logic/tinder-ranking.js';
 import { getActiveTimerForTask, stopTimer } from '../data/timer-store.js';
 import { completeSingleTask } from '../data/archive-store.js';
 import { isQuotaError } from '../utils/media-compaction.js';
@@ -116,6 +117,7 @@ export function renderTinderView() {
   const themeFilter = activeMood ? getThemeFilter(activeMood.theme) : 'none';
   const isNormalMode = activeMoodId === 'default';
   let priorityResolver = createPriorityResolver(nav, activeMoodId);
+  let sorting = getMoodSorting(activeMood);
 
   function collectLeaves() {
     const result = [];
@@ -123,12 +125,18 @@ export function renderTinderView() {
       if (node.isLeaf && !isTaskHiddenForMood(activeMoodId, node.id)) result.push(node);
     });
 
-    // Базовая оценка — важность. Кулдаун умножает её на 0..1,
-    // восстановленная задача получает бонус 1.25.
+    // Взвешенная релевантность: важность + скорость + сложность.
+    // Кулдаун умножает её на 0..1, восстановленная задача получает бонус 1.25.
     const now = Date.now();
-    const score = task => (
-      priorityResolver.resolve(task.id) * getCooldownState(task, now).multiplier
-    );
+    const score = task => {
+      const base = scoreTask({
+        importance: priorityResolver.resolve(task.id),
+        timeScore: task.timeScore,
+        difficulty: task.difficulty
+      }, sorting);
+
+      return base * getCooldownState(task, now).multiplier;
+    };
 
     return result.sort((a, b) => score(b) - score(a));
   }

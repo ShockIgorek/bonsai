@@ -257,3 +257,76 @@
   border-color: var(--accent);
   color: var(--text-main);
 }
+
+/* Текущие предпочтения на карточке настроения */
+.mood-sorting {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.mood-sorting-title,
+.mood-top-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.mood-sorting-row {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.mood-sorting-row.is-top {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.mood-sorting-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mood-sorting-hint {
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.mood-sorting-row.is-top .mood-sorting-hint {
+  color: color-mix(in srgb, var(--accent) 70%, var(--text-muted));
+}
+
+.mood-sorting-share {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mood-top {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mood-top-list {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

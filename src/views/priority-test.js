@@ -33,7 +33,7 @@ export function openPriorityTest(mood, onDone) {
     screen.innerHTML = `
       <div class="priority-header">
         <button class="back-btn" data-action="close" aria-label="Закрыть">←</button>
-        <h1 class="priority-title">Приоритеты · ${escapeHtml(mood.name)}</h1>
+        <h1 class="priority-title">Калибровка · ${escapeHtml(mood.name)}</h1>
       </div>
       <div class="priority-empty">
         Для теста нужно минимум 2 видимые задачи.<br>
@@ -51,7 +51,7 @@ export function openPriorityTest(mood, onDone) {
   screen.innerHTML = `
     <div class="priority-header">
       <button class="back-btn" data-action="close" aria-label="Назад">←</button>
-      <h1 class="priority-title">Приоритеты · ${escapeHtml(mood.name)}</h1>
+      <h1 class="priority-title">Калибровка · ${escapeHtml(mood.name)}</h1>
       <button class="priority-finish" type="button" data-action="finish" disabled>Завершить</button>
     </div>
     <div class="priority-progress">
@@ -61,7 +61,13 @@ export function openPriorityTest(mood, onDone) {
       <div class="priority-progress-text"></div>
     </div>
     <div class="priority-pair"></div>
-    <div class="priority-footer">Выбери более важную задачу. «=» — если они одинаково важны. Желательно сравнить каждую хотя бы 2 раза.</div>
+    <div class="priority-footer">
+      Выбери более важную задачу. «=» — если они одинаково важны. Желательно сравнить каждую хотя бы 2 раза.
+      <br>
+      <span style="font-size: 11px; color: var(--text-muted);">
+        Сейчас калибруется важность. Вес скорости и сложности пока по умолчанию.
+      </span>
+    </div>
   `;
   document.getElementById('app').appendChild(screen);
 

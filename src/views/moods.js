@@ -1,7 +1,21 @@
 import { getMoods } from '../data/moods-store.js';
+import { getTasksTree } from '../data/tasks-store.js';
+import { buildNavIndex } from '../store.js';
+import { getMoodSorting, getSortingPreferences } from '../logic/tinder-ranking.js';
+import { getMoodTopNodes } from '../logic/mood-summary.js';
 import { updateHeaderMoodName } from './layout.js';
 import { openMoodModal } from './mood-modal.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
 
 export function renderMoodsScreen({ startup = false } = {}) {
   const main = document.getElementById('main-content');
@@ -9,6 +23,7 @@ export function renderMoodsScreen({ startup = false } = {}) {
 
   const moods = getMoods();
   const activeMoodId = localStorage.getItem('bonsai-active-mood') || 'default';
+  const nav = buildNavIndex(getTasksTree());
 
   main.innerHTML = `
     <div class="moods-screen">
@@ -23,22 +38,44 @@ export function renderMoodsScreen({ startup = false } = {}) {
           const isActive = m.id === activeMoodId;
           const theme = m.theme || 'bonsai';
           const filter = getThemeFilter(theme);
-          const hasPriorities = m.priorities && Object.keys(m.priorities).length > 0;
+          const sortingPreferences = getSortingPreferences(getMoodSorting(m));
+          const topNodes = getMoodTopNodes(nav, m.id, 3);
 
           return `
           <div class="mood-card ${isActive ? 'is-active' : ''}" data-mood="${m.id}" data-theme="${theme}" role="button" tabindex="0">
             
             <div class="mood-cover">
               ${m.image
-                ? `<img src="${m.image}" alt="${m.name}" style="filter: ${filter};" onerror="this.style.display='none'"/>`
+                ? `<img src="${m.image}" alt="${escapeHtml(m.name)}" style="filter: ${filter};" onerror="this.style.display='none'"/>`
                 : `<div class="mood-cover-placeholder" style="filter: ${filter};">🌱</div>`}
             </div>
 
             <div class="mood-info">
-              <span class="mood-name">${m.name}</span>
-              ${m.description ? `<span class="mood-desc">${m.description}</span>` : ''}
+              <span class="mood-name">${escapeHtml(m.name)}</span>
+              ${m.description ? `<span class="mood-desc">${escapeHtml(m.description)}</span>` : ''}
+
+              <div class="mood-sorting">
+                <div class="mood-sorting-title">Влияние на сортировку</div>
+                ${sortingPreferences.map((preference, index) => `
+                  <div class="mood-sorting-row ${index === 0 ? 'is-top' : ''}" title="${escapeHtml(preference.label)}: ${escapeHtml(preference.directionLabel)} (${Math.round(preference.share * 100)}%)">
+                    <span class="mood-sorting-label">${escapeHtml(preference.label)}</span>
+                    <span class="mood-sorting-hint">${escapeHtml(preference.directionLabel)}</span>
+                    <span class="mood-sorting-share">${Math.round(preference.share * 100)}%</span>
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="mood-top">
+                <div class="mood-top-title">Сейчас выше</div>
+                <div class="mood-top-list">
+                  ${topNodes.length
+                    ? topNodes.map(node => escapeHtml(node.name)).join(' · ')
+                    : 'Пока нет задач'}
+                </div>
+              </div>
+
               <button class="mood-priority-btn" type="button" data-priority="${m.id}">
-                ${hasPriorities ? 'Пересмотреть приоритеты' : 'Расставить приоритеты'}
+                Калибровка
               </button>
             </div>
 

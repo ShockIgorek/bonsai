@@ -42,6 +42,16 @@ test('score prefers important, short and easy tasks', () => {
   assert.ok(quickImportant > longHard);
 });
 
+test('long-first time direction renames speed to duration', () => {
+  const preferences = getSortingPreferences({
+    weights: { importance: 0.4, time: 0.3, difficulty: 0.3 },
+    directions: { importance: 1, time: 1, difficulty: 1 }
+  });
+
+  assert.equal(preferences.find(item => item.key === 'time').label, 'Длительность');
+  assert.equal(preferences.find(item => item.key === 'time').directionLabel, 'дольше');
+});
+
 test('custom mood weights and directions override defaults', () => {
   const sorting = getMoodSorting({
     sorting: {

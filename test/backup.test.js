@@ -45,7 +45,12 @@ function seedStorage() {
         theme: 'bonsai',
         image: 'data:image/png;base64,BBBB',
         priorities: { 'task-a': 8 },
-        hiddenTasks: ['folder-b']
+        hiddenTasks: ['folder-b'],
+        sorting: {
+          weights: { importance: 0.5, time: 0.3, difficulty: 0.2 },
+          directions: { importance: 1, time: -1, difficulty: -1 },
+          presetId: 'custom'
+        }
       }
     ],
     'bonsai-archive': [
@@ -122,6 +127,12 @@ test('full backup can be restored into empty storage', () => {
   assert.equal(tree.children[0].duration.calibrated, true);
   assert.equal(moods[0].priorities['task-a'], 8);
   assert.deepEqual(moods[0].hiddenTasks, ['folder-b']);
+  assert.deepEqual(moods[0].sorting.weights, {
+    importance: 0.5,
+    time: 0.3,
+    difficulty: 0.2
+  });
+  assert.equal(moods[0].sorting.presetId, 'custom');
   assert.equal(archive.length, 1);
   assert.equal(memory.storage.getItem('bonsai-theme'), 'bonsai');
   assert.equal(memory.storage.getItem('bonsai-active-mood'), 'default');

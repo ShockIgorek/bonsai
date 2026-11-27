@@ -268,6 +268,28 @@
   border-top: 1px solid var(--border);
 }
 
+.mood-sorting-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mood-sorting-edit {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mood-sorting-edit:hover {
+  text-decoration: underline;
+}
+
 .mood-sorting-title,
 .mood-top-title {
   font-size: 9px;

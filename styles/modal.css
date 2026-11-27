@@ -146,6 +146,98 @@
   color: var(--text-secondary);
 }
 
+/* Настройка весов и направлений сортировки настроения */
+.sorting-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sorting-preset {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sorting-preset.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.sorting-criteria {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sorting-criterion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sorting-criterion-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sorting-criterion-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.sorting-criterion-value {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.sorting-slider {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.sorting-direction {
+  display: flex;
+  gap: 6px;
+}
+
+.sorting-direction button {
+  flex: 1;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sorting-direction button.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.sorting-sum {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 /* Модалка выполнения циклической задачи */
 .completion-modal-overlay {
   position: absolute;

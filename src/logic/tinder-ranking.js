@@ -21,6 +21,7 @@ const CRITERIA = [
   {
     key: 'time',
     label: 'Скорость',
+    positiveLabel: 'Длительность',
     highLabel: 'дольше',
     lowLabel: 'короче'
   },
@@ -129,7 +130,7 @@ export function getSortingPreferences(sorting = DEFAULT_SORTING) {
       const direction = directions[criterion.key];
       return {
         key: criterion.key,
-        label: criterion.label,
+        label: direction > 0 ? (criterion.positiveLabel || criterion.label) : criterion.label,
         direction,
         directionLabel: direction > 0 ? criterion.highLabel : criterion.lowLabel,
         weight: weights[criterion.key],

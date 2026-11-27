@@ -55,7 +55,10 @@ export function renderMoodsScreen({ startup = false } = {}) {
               ${m.description ? `<span class="mood-desc">${escapeHtml(m.description)}</span>` : ''}
 
               <div class="mood-sorting">
-                <div class="mood-sorting-title">Влияние на сортировку</div>
+                <div class="mood-sorting-head">
+                  <span class="mood-sorting-title">Влияние на сортировку</span>
+                  <button class="mood-sorting-edit" type="button" data-sorting="${m.id}">Настроить</button>
+                </div>
                 ${sortingPreferences.map((preference, index) => `
                   <div class="mood-sorting-row ${index === 0 ? 'is-top' : ''}" title="${escapeHtml(preference.label)}: ${escapeHtml(preference.directionLabel)} (${Math.round(preference.share * 100)}%)">
                     <span class="mood-sorting-label">${escapeHtml(preference.label)}</span>
@@ -97,7 +100,11 @@ export function renderMoodsScreen({ startup = false } = {}) {
 
   main.querySelectorAll('.mood-card:not(.add-mood)').forEach(card => {
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.edit-mood-btn') || e.target.closest('.mood-priority-btn')) return;
+      if (
+        e.target.closest('.edit-mood-btn') ||
+        e.target.closest('.mood-priority-btn') ||
+        e.target.closest('.mood-sorting-edit')
+      ) return;
       const moodId = card.dataset.mood;
       const mood = moods.find(m => m.id === moodId);
       if (!mood) return;
@@ -131,6 +138,18 @@ export function renderMoodsScreen({ startup = false } = {}) {
       const mood = moods.find(m => m.id === btn.dataset.priority);
       if (!mood) return;
       import('./priority-test.js').then(module => module.openPriorityTest(
+        mood,
+        () => renderMoodsScreen({ startup })
+      ));
+    });
+  });
+
+  main.querySelectorAll('.mood-sorting-edit').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const mood = moods.find(m => m.id === btn.dataset.sorting);
+      if (!mood) return;
+      import('./sorting-modal.js').then(module => module.openSortingModal(
         mood,
         () => renderMoodsScreen({ startup })
       ));

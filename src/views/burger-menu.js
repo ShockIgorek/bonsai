@@ -1,4 +1,21 @@
 import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
+import {
+  createFullBackup,
+  validateFullBackup,
+  getBackupSummary,
+  restoreFullBackup
+} from '../data/backup-store.js';
+
+function formatBackupDate(timestamp) {
+  if (!timestamp) return 'дата неизвестна';
+  return new Date(timestamp).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
 
 /**
  * Открывает бургер-меню (полноэкранный экран).
@@ -26,11 +43,26 @@ export function openBurgerMenu() {
       <button id="burger-log" class="btn-save" style="background: var(--bg-panel); color: var(--text-main); text-align: left; padding: 16px; font-size: 16px;">
         Лог выполнения
       </button>
+
+      <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px;">
+        Полный бэкап
+      </div>
+      <button id="burger-full-backup" class="btn-save" style="background: var(--bg-panel); color: var(--text-main); text-align: left; padding: 16px; font-size: 16px;">
+        Скачать полный бэкап (без фото)
+      </button>
+      <button id="burger-full-import" class="btn-save" style="background: var(--bg-panel); color: var(--text-main); text-align: left; padding: 16px; font-size: 16px;">
+        Импорт полного бэкапа
+      </button>
+      <input type="file" id="burger-full-file-input" accept=".json,application/json" style="display: none;" />
+
+      <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px;">
+        Только задачи
+      </div>
       <button id="burger-export" class="btn-save" style="background: var(--bg-panel); color: var(--text-main); text-align: left; padding: 16px; font-size: 16px;">
-        📤 Экспорт задач (JSON)
+        Экспорт только задач
       </button>
       <button id="burger-import" class="btn-save" style="background: var(--bg-panel); color: var(--text-main); text-align: left; padding: 16px; font-size: 16px;">
-        📥 Импорт задач (JSON)
+        Импорт только задач
       </button>
       <input type="file" id="burger-file-input" accept=".json,application/json" style="display: none;" />
 
@@ -39,7 +71,7 @@ export function openBurgerMenu() {
 
       <!-- Кнопка "Очистить всё" (внизу) -->
       <button id="burger-clear" class="btn-save" style="background: #e5484d; color: white; text-align: left; padding: 16px; font-size: 16px;">
-        🗑️ Очистить все задачи
+        Очистить все задачи
       </button>
       <div style="padding-top: 4px; text-align: center; font-size: 11px; color: var(--text-muted);">
         сборка ${__BUILD_ID__}
@@ -66,71 +98,79 @@ export function openBurgerMenu() {
     URL.revokeObjectURL(url);
   }
 
-  // Закрыть
-  screen.querySelector('#burger-close').addEventListener('click', close);
-
-  // Экспорт
-  screen.querySelector('#burger-export').addEventListener('click', () => {
-    const tree = getTasksTree();
-    console.log('ЭКСПОРТ: дерево =', tree);
-    
-    // Очищаем base64-картинки (они раздувают файл)
-    function cleanTree(node) {
-      if (node.image && node.image.startsWith('data:')) {
-        node.image = ''; // убираем base64
-      }
-      if (node.children) {
-        node.children.forEach(cleanTree);
-      }
-    }
-    cleanTree(tree);
-    
-    const json = JSON.stringify(tree, null, 2);
-    console.log('ЭКСПОРТ: JSON длина =', json.length);
-    const blob = new Blob([json], { type: 'application/json' });
-    const fileName = `bonsai-tasks-${new Date().toISOString().slice(0, 10)}.json`;
-
-    // Пробуем Web Share API (для Android/iOS — нативно)
-    console.log('ЭКСПОРТ: navigator.share =', !!navigator.share);
-    console.log('ЭКСПОРТ: navigator.canShare =', !!navigator.canShare);
-    
-    // Пробуем Web Share API (для Android/iOS — нативно)
+  function shareOrDownload(blob, fileName, title) {
     if (navigator.share && navigator.canShare) {
       const file = new File([blob], fileName, { type: 'application/json' });
-      const canShare = navigator.canShare({ files: [file] });
-      console.log('ЭКСПОРТ: canShare файла =', canShare);
-      if (canShare) {
+      if (navigator.canShare({ files: [file] })) {
         navigator.share({
           files: [file],
-          title: 'Экспорт задач Bonsai',
+          title,
           text: 'Сохрани файл в удобное место'
-        }).then(() => {
-          console.log('ЭКСПОРТ: share успешен');
-        }).catch((err) => {
-          console.log('ЭКСПОРТ: share ошибка, используем fallback', err);
-          // Fallback при ошибке share
+        }).catch(() => {
           downloadFile(blob, fileName);
         });
         return;
       }
     }
 
-    // Fallback: скачивание через ссылку
-    console.log('ЭКСПОРТ: используем fallback (скачивание)');
     downloadFile(blob, fileName);
+  }
+
+  function downloadJson(data, fileName, title) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    shareOrDownload(blob, fileName, title);
+  }
+
+  // Закрыть
+  screen.querySelector('#burger-close').addEventListener('click', close);
+
+  // Экспорт только задач
+  screen.querySelector('#burger-export').addEventListener('click', () => {
+    const tree = getTasksTree();
+
+    function cleanTree(node) {
+      if (node.image && node.image.startsWith('data:')) {
+        node.image = '';
+      }
+      if (node.children) {
+        node.children.forEach(cleanTree);
+      }
+    }
+    cleanTree(tree);
+
+    downloadJson(
+      tree,
+      `bonsai-tasks-${new Date().toISOString().slice(0, 10)}.json`,
+      'Экспорт задач Bonsai'
+    );
   });
 
-  // Импорт
+  // Импорт только задач
   const fileInput = screen.querySelector('#burger-file-input');
   screen.querySelector('#burger-import').addEventListener('click', () => {
     fileInput.click();
+  });
+
+  // Экспорт полного бэкапа
+  screen.querySelector('#burger-full-backup').addEventListener('click', () => {
+    const backup = createFullBackup({ includeImages: false });
+    downloadJson(
+      backup,
+      `bonsai-full-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      'Полный бэкап Bonsai'
+    );
+  });
+
+  // Импорт полного бэкапа
+  const fullFileInput = screen.querySelector('#burger-full-file-input');
+  screen.querySelector('#burger-full-import').addEventListener('click', () => {
+    fullFileInput.click();
   });
 
   // Очистить всё (с подтверждением)
   screen.querySelector('#burger-clear').addEventListener('click', () => {
     const confirmText = prompt('Это удалит ВСЕ задачи безвозвратно.\nВведите слово "удалить" для подтверждения:');
     if (confirmText === 'удалить') {
-      // Очищаем дерево до пустого корня
       const emptyTree = { name: 'Мои задачи', children: [] };
       saveTasksTree(emptyTree);
       alert('Все задачи удалены.');
@@ -148,20 +188,62 @@ export function openBurgerMenu() {
     reader.onload = (event) => {
       try {
         const data = JSON.parse(event.target.result);
-        // Простая валидация: должен быть объект с name и children (или хотя бы name)
         if (!data || typeof data !== 'object' || !data.name) {
           alert('Ошибка: файл не похож на дерево задач Bonsai');
           return;
         }
         saveTasksTree(data);
-        alert('Импорт успешен! Дерево задач загружено.');
+        alert('Импорт успешен. Дерево задач загружено.');
         close();
-        // Перерисовываем текущий экран (если нужно — обнови вручную)
         location.reload();
       } catch (err) {
         alert('Ошибка чтения файла: ' + err.message);
+      } finally {
+        fileInput.value = '';
       }
     };
+    reader.readAsText(file);
+  });
+
+  fullFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      try {
+        const backup = JSON.parse(event.target.result);
+        const error = validateFullBackup(backup);
+        if (error) {
+          alert(error);
+          return;
+        }
+
+        const summary = getBackupSummary(backup);
+        const lines = [
+          `Дата: ${formatBackupDate(summary.exportedAt)}`,
+          `Фото: ${summary.includesImages ? 'включены' : 'не включены'}`,
+          `Задач: ${summary.tasks}`,
+          `Настроений: ${summary.moods}`,
+          `Архив: ${summary.archive}`,
+          `Лог: ${summary.log}`,
+          '',
+          'Текущие данные будут заменены.'
+        ];
+
+        if (!confirm(`Импортировать полный бэкап?\n\n${lines.join('\n')}`)) return;
+
+        const restored = restoreFullBackup(backup);
+        alert(`Импорт завершён.\nЗадач: ${restored.tasks}, настроений: ${restored.moods}.`);
+        close();
+        location.reload();
+      } catch (err) {
+        alert('Не удалось импортировать бэкап: ' + err.message);
+      } finally {
+        fullFileInput.value = '';
+      }
+    };
+
     reader.readAsText(file);
   });
 }

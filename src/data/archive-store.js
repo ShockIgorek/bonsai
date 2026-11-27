@@ -15,7 +15,7 @@ export function archiveTask(task, moodId) {
     parentPath: task.path ? task.path.slice(0, -1) : [] // путь папки (без самой задачи)
   };
   archive.push(archivedTask);
-  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+  saveArchive(archive);
 }
 
 /**
@@ -31,6 +31,10 @@ export function getArchive() {
     }
   }
   return [];
+}
+
+export function saveArchive(archive) {
+  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(Array.isArray(archive) ? archive : []));
 }
 
 /**
@@ -59,7 +63,7 @@ export function logCompletion(task, moodId, extra = {}) {
     difficulty: extra.difficulty ?? null,
     actualMinutes: extra.actualMinutes ?? null
   });
-  localStorage.setItem(LOG_KEY, JSON.stringify(log));
+  saveLog(log);
 }
 
 /**
@@ -75,6 +79,10 @@ export function getLog() {
     }
   }
   return [];
+}
+
+export function saveLog(log) {
+  localStorage.setItem(LOG_KEY, JSON.stringify(Array.isArray(log) ? log : []));
 }
 
 /**

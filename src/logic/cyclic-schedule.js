@@ -82,7 +82,9 @@ export function getCooldownState(task, now = Date.now()) {
 
 export function getDifficultyRatings(task) {
   return getCompletionHistory(task)
-    .map(item => Number(item.difficulty))
+    .map(item => item && item.difficulty)
+    .filter(value => value !== null && value !== undefined && value !== '')
+    .map(value => Number(value))
     .filter(value => Number.isFinite(value))
     .slice(-DIFFICULTY_SAMPLE_SIZE);
 }

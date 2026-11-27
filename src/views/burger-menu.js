@@ -41,6 +41,9 @@ export function openBurgerMenu() {
       <button id="burger-clear" class="btn-save" style="background: #e5484d; color: white; text-align: left; padding: 16px; font-size: 16px;">
         🗑️ Очистить все задачи
       </button>
+      <div style="padding-top: 4px; text-align: center; font-size: 11px; color: var(--text-muted);">
+        сборка ${__BUILD_ID__}
+      </div>
     </div>
   `;
   document.getElementById('app').appendChild(screen);

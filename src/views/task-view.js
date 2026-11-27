@@ -5,6 +5,9 @@ import { createPriorityResolver } from '../data/mood-priorities.js';
 import { formatTaskDuration, formatInterval, formatLastCompleted, formatCountdown } from '../utils/format-time.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
 import { getCooldownState, getLastCompletionAt } from '../logic/cyclic-schedule.js';
+import { completeSingleTask } from '../data/archive-store.js';
+import { getActiveTimerForTask, stopTimer } from '../data/timer-store.js';
+import { isQuotaError } from '../utils/media-compaction.js';
 import { openAddTaskModal, openDeleteTaskModal } from './task-modal.js';
 
 /**
@@ -34,6 +37,7 @@ export function openTaskView(task, onChanged) {
   const isHidden = isTaskHiddenForMood(activeMoodId, task.id);
   const isFolder = !task.isLeaf;
   const isCyclic = !isFolder && task.type === 'cyclic';
+  const canComplete = !isFolder;
   const cooldown = getCooldownState(task);
   const isCooling = isCyclic && cooldown.isCooling;
   const lastCompletedAt = getLastCompletionAt(task);
@@ -117,8 +121,8 @@ export function openTaskView(task, onChanged) {
         </button>
         ` : ''}
         
-        <button id="tv-complete" class="btn-save" style="background: var(--accent); color: var(--bg-main); ${isCyclic ? '' : 'opacity: 0.45; cursor: not-allowed;'}" ${isCyclic ? '' : 'disabled'}>
-          ${isCyclic ? 'Выполнить' : 'Выполнение одноразовых пока недоступно'}
+        <button id="tv-complete" class="btn-save" style="background: var(--accent); color: var(--bg-main); ${canComplete ? '' : 'opacity: 0.45; cursor: not-allowed;'}" ${canComplete ? '' : 'disabled'}>
+          ${canComplete ? 'Выполнить' : 'Сначала закрой подзадачи'}
         </button>
         
         <button id="tv-edit" class="btn-save" style="background: var(--bg-panel); color: var(--text-main);">
@@ -165,12 +169,32 @@ export function openTaskView(task, onChanged) {
     }
   });
 
-  // Выполнить циклическую задачу
-  screen.querySelector('#tv-complete')?.addEventListener('click', () => {
-    if (!isCyclic) return;
-    import('./completion-modal.js').then(({ openCompletionModal }) => {
-      openCompletionModal(task, activeMoodId, () => close());
-    });
+  // Выполнить задачу
+  screen.querySelector('#tv-complete')?.addEventListener('click', async () => {
+    if (!canComplete) return;
+
+    if (isCyclic) {
+      import('./completion-modal.js').then(({ openCompletionModal }) => {
+        openCompletionModal(task, activeMoodId, () => close());
+      });
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Выполнить задачу «${task.name}»?\nОна уйдёт в архив.`
+    );
+    if (!confirmed) return;
+
+    try {
+      if (getActiveTimerForTask(task.id)) stopTimer();
+      await completeSingleTask(task, activeMoodId);
+      close();
+    } catch (err) {
+      console.error('Не удалось выполнить задачу', err);
+      alert(isQuotaError(err)
+        ? 'Не хватает места для сохранения. Уменьши или удали фото.'
+        : 'Не удалось выполнить задачу. Попробуй ещё раз.');
+    }
   });
 
   // Редактировать

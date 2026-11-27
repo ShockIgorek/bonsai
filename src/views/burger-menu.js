@@ -43,6 +43,9 @@ export function openBurgerMenu() {
       <button id="burger-log" class="btn-save" style="background: var(--bg-panel); color: var(--text-main); text-align: left; padding: 16px; font-size: 16px;">
         Лог выполнения
       </button>
+      <button id="burger-archive" class="btn-save" style="background: var(--bg-panel); color: var(--text-main); text-align: left; padding: 16px; font-size: 16px;">
+        Архив
+      </button>
 
       <div style="font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px;">
         Полный бэкап
@@ -84,6 +87,15 @@ export function openBurgerMenu() {
 
   screen.querySelector('#burger-log').addEventListener('click', () => {
     import('./log-view.js').then(module => module.openLogView());
+  });
+
+  screen.querySelector('#burger-archive').addEventListener('click', () => {
+    import('./archive-view.js').then(module => module.openArchiveView({
+      onRestored: () => {
+        const mode = localStorage.getItem('bonsai-current-mode') || 'tinder';
+        import('../router.js').then(router => router.showMainView(mode));
+      }
+    }));
   });
 
   // Вспомогательная функция для скачивания

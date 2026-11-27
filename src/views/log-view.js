@@ -1,6 +1,6 @@
 import { getLog } from '../data/archive-store.js';
 import { getMoods } from '../data/moods-store.js';
-import { formatTaskDuration } from '../utils/format-time.js';
+import { formatTaskDuration, formatDateTime } from '../utils/format-time.js';
 
 function escapeHtml(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
@@ -10,16 +10,6 @@ function escapeHtml(value) {
     '"': '&quot;',
     "'": '&#39;'
   }[ch]));
-}
-
-function formatLogDate(timestamp) {
-  return new Date(timestamp).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
 }
 
 export function openLogView() {
@@ -62,7 +52,7 @@ export function openLogView() {
           <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 6px;">
             <div style="display: flex; justify-content: space-between; gap: 12px; align-items: baseline;">
               <span style="font-weight: 700; font-size: 15px;">${escapeHtml(entry.taskName)}</span>
-              <span style="font-size: 12px; color: var(--text-muted); white-space: nowrap;">${formatLogDate(entry.completedAt)}</span>
+              <span style="font-size: 12px; color: var(--text-muted); white-space: nowrap;">${formatDateTime(entry.completedAt)}</span>
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--text-secondary);">
               <span>Настроение: ${escapeHtml(mood)}</span>

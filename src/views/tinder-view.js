@@ -8,7 +8,9 @@ import { createPriorityResolver } from '../data/mood-priorities.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
 import { getCooldownState, getLastCompletionAt } from '../logic/cyclic-schedule.js';
 import { getStreakSegments } from '../logic/streak.js';
-import { getActiveTimerForTask } from '../data/timer-store.js';
+import { getActiveTimerForTask, stopTimer } from '../data/timer-store.js';
+import { completeSingleTask } from '../data/archive-store.js';
+import { isQuotaError } from '../utils/media-compaction.js';
 
 // Стили для SVG внутри карточки
 const style = document.createElement('style');
@@ -247,6 +249,7 @@ export function renderTinderView() {
     const activeTimer = getActiveTimerForTask(leaf.id);
     const timerIsPaused = !!(activeTimer && activeTimer.isPaused);
     const canUseTimer = isCyclic || !!activeTimer;
+    const canComplete = isCyclic || leaf.type === 'single';
     const timerButtonBg = canUseTimer && activeTimer
       ? (timerIsPaused ? 'var(--bg-panel)' : 'var(--accent)')
       : 'var(--bg-panel)';
@@ -324,7 +327,7 @@ export function renderTinderView() {
             <div style="display: flex; justify-content: space-evenly; align-items: center; margin-top: -32px; margin-bottom: 8px;">
               <button id="tinder-hide" class="tinder-action-btn" style="background: ${isNormalMode ? 'var(--bg-panel)' : 'var(--danger)'}; border: 3px solid ${isNormalMode ? 'var(--border)' : 'var(--danger)'}; color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; cursor: ${isNormalMode ? 'not-allowed' : 'pointer'}; display: flex; align-items: center; justify-content: center; opacity: ${isNormalMode ? '0.3' : '1'}; pointer-events: ${isNormalMode ? 'none' : 'auto'};" title="Скрыть">${ICONS.x}</button>
               <button id="tinder-timer-main" class="tinder-action-btn" style="background: ${timerButtonBg}; border: 3px solid ${timerButtonBorder}; color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; cursor: ${canUseTimer ? 'pointer' : 'not-allowed'}; display: flex; align-items: center; justify-content: center; box-shadow: ${timerButtonGlow}; opacity: ${canUseTimer ? '1' : '0.3'}; pointer-events: ${canUseTimer ? 'auto' : 'none'};" title="${timerButtonTitle}" ${canUseTimer ? '' : 'disabled'}>${ICONS.timer}</button>
-              <button id="tinder-complete" class="tinder-action-btn" style="background: var(--accent); border: 3px solid var(--accent); color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; display: ${isCooling ? 'none' : 'flex'}; align-items: center; justify-content: center; opacity: ${isCyclic ? '1' : '0.3'}; pointer-events: ${isCyclic ? 'auto' : 'none'}; cursor: ${isCyclic ? 'pointer' : 'not-allowed'};" title="${isCyclic ? 'Выполнить' : 'Выполнение одноразовых пока недоступно'}" ${isCyclic ? '' : 'disabled'}>${ICONS.check}</button>
+              <button id="tinder-complete" class="tinder-action-btn" style="background: var(--accent); border: 3px solid var(--accent); color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; display: ${isCooling ? 'none' : 'flex'}; align-items: center; justify-content: center; opacity: ${canComplete ? '1' : '0.3'}; pointer-events: ${canComplete ? 'auto' : 'none'}; cursor: ${canComplete ? 'pointer' : 'not-allowed'};" title="${canComplete ? 'Выполнить' : 'Выполнение недоступно'}" ${canComplete ? '' : 'disabled'}>${ICONS.check}</button>
             </div>
 
             ${isCyclic ? `
@@ -430,10 +433,34 @@ export function renderTinderView() {
       });
     }
 
-    main.querySelector('#tinder-complete')?.addEventListener('click', (e) => {
+    main.querySelector('#tinder-complete')?.addEventListener('click', async (e) => {
       e.stopPropagation();
-      if (leaf.type !== 'cyclic') return;
-      openCompletion();
+      if (!canComplete) return;
+
+      if (leaf.type === 'cyclic') {
+        openCompletion();
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Выполнить задачу «${leaf.name}»?\nОна уйдёт в архив.`
+      );
+      if (!confirmed) return;
+
+      const completedId = leaf.id;
+      const nextId = leaves[currentIndex + 1] ? leaves[currentIndex + 1].id : null;
+
+      try {
+        if (getActiveTimerForTask(leaf.id)) stopTimer();
+        await completeSingleTask(leaf, activeMoodId);
+        advanceAfterCompletion(completedId, nextId);
+        render();
+      } catch (err) {
+        console.error('Не удалось выполнить одноразовую задачу', err);
+        alert(isQuotaError(err)
+          ? 'Не хватает места для сохранения. Уменьши или удали фото.'
+          : 'Не удалось выполнить задачу. Попробуй ещё раз.');
+      }
     });
 
     main.querySelector('#tinder-repeat')?.addEventListener('click', (e) => {

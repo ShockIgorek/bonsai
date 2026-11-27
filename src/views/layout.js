@@ -5,6 +5,13 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
   const app = document.getElementById('app');
   if (!app) return;
 
+  // Останавливаем таймеры/слушатели прошлого экрана (Тиндер и т.п.),
+  // иначе они продолжат работать поверх нового экрана.
+  if (typeof window.__tinderCleanup === 'function') {
+    window.__tinderCleanup();
+    window.__tinderCleanup = null;
+  }
+
   // Текущий режим (для подсветки таб-бара)
   const currentMode = localStorage.getItem('bonsai-current-mode') || 'tinder';
 

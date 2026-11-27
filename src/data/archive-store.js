@@ -44,15 +44,20 @@ export function clearArchive() {
  * Добавить запись в лог выполнения.
  * @param {object} task — задача
  * @param {string} moodId — id настроения
+ * @param {object} extra — difficulty / actualMinutes (пока null)
  */
-export function logCompletion(task, moodId) {
+export function logCompletion(task, moodId, extra = {}) {
   const log = getLog();
   log.push({
+    taskId: task.id || null,
     taskName: task.name,
     taskType: task.type || 'single',
     moodId,
     completedAt: Date.now(),
-    parentPath: task.path ? task.path.slice(0, -1) : []
+    parentPath: task.path ? task.path.slice(0, -1) : [],
+    taskPath: task.path || [],
+    difficulty: extra.difficulty ?? null,
+    actualMinutes: extra.actualMinutes ?? null
   });
   localStorage.setItem(LOG_KEY, JSON.stringify(log));
 }

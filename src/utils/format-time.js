@@ -55,3 +55,29 @@ export function formatTaskDuration(duration) {
 
   return parts.join(' ');
 }
+
+export function formatCountdown(ms) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+
+  const parts = [];
+  if (days > 0) parts.push(`${days}д`);
+  if (hours > 0) parts.push(`${hours}ч`);
+  if (minutes > 0) parts.push(`${minutes}м`);
+  parts.push(`${String(seconds).padStart(2, '0')}с`);
+
+  return parts.join(' ');
+}
+
+export function formatLastCompleted(timestamp) {
+  if (!timestamp) return '—';
+  return new Date(timestamp).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}

@@ -2,8 +2,9 @@ import { buildNavIndex } from '../store.js';
 import { getTasksTree, saveTasksTree } from '../data/tasks-store.js';
 import { getMoods, hideTaskForMood, isTaskHiddenForMood } from '../data/moods-store.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
-import { formatTaskDuration } from '../utils/format-time.js';
+import { formatTaskDuration, formatInterval, formatLastCompleted, formatCountdown } from '../utils/format-time.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
+import { getCooldownState, getLastCompletionAt } from '../logic/cyclic-schedule.js';
 import { openAddTaskModal, openDeleteTaskModal } from './task-modal.js';
 
 /**
@@ -32,6 +33,10 @@ export function openTaskView(task, onChanged) {
   const isNormal = activeMoodId === 'default';
   const isHidden = isTaskHiddenForMood(activeMoodId, task.id);
   const isFolder = !task.isLeaf;
+  const isCyclic = !isFolder && task.type === 'cyclic';
+  const cooldown = getCooldownState(task);
+  const isCooling = isCyclic && cooldown.isCooling;
+  const lastCompletedAt = getLastCompletionAt(task);
   const nav = buildNavIndex(getTasksTree());
   const priority = createPriorityResolver(nav, activeMoodId).resolve(task.id);
 
@@ -78,8 +83,26 @@ export function openTaskView(task, onChanged) {
         </div>
         <div style="display: flex; justify-content: space-between;">
           <span style="color: var(--text-secondary);">Тип</span>
-          <span style="font-weight: 600;">Одноразовая <span style="font-size: 11px; color: var(--text-muted);">(заглушка)</span></span>
+          <span style="font-weight: 600;">${isCyclic ? 'Циклическая' : 'Одноразовая'}</span>
         </div>
+        ${isCyclic && task.interval ? `
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">Интервал</span>
+            <span style="font-weight: 600; color: var(--accent);">${formatInterval(task.interval.totalMinutes)}</span>
+          </div>
+        ` : ''}
+        ${isCyclic ? `
+          <div style="display: flex; justify-content: space-between; gap: 12px;">
+            <span style="color: var(--text-secondary);">Последнее выполнение</span>
+            <span style="font-weight: 600; text-align: right;">${formatLastCompleted(lastCompletedAt)}</span>
+          </div>
+          ${isCooling ? `
+            <div style="display: flex; justify-content: space-between; gap: 12px;">
+              <span style="color: var(--text-secondary);">Восстановление через</span>
+              <span style="font-weight: 600; color: var(--accent); text-align: right;">${formatCountdown(cooldown.remainingMs)}</span>
+            </div>
+          ` : ''}
+        ` : ''}
         <div style="display: flex; justify-content: space-between;">
           <span style="color: var(--text-secondary);">Скрыта для настроения</span>
           <span style="font-weight: 600; color: ${isHidden ? '#e5484d' : '#30a46c'};">${isHidden ? 'Да' : 'Нет'}</span>
@@ -94,8 +117,8 @@ export function openTaskView(task, onChanged) {
         </button>
         ` : ''}
         
-        <button id="tv-complete" class="btn-save" style="background: var(--accent); color: var(--bg-main);">
-          ✅ Выполнить
+        <button id="tv-complete" class="btn-save" style="background: var(--accent); color: var(--bg-main); ${isCyclic ? '' : 'opacity: 0.45; cursor: not-allowed;'}" ${isCyclic ? '' : 'disabled'}>
+          ${isCyclic ? 'Выполнить' : 'Выполнение одноразовых пока недоступно'}
         </button>
         
         <button id="tv-edit" class="btn-save" style="background: var(--bg-panel); color: var(--text-main);">
@@ -142,9 +165,12 @@ export function openTaskView(task, onChanged) {
     }
   });
 
-  // Выполнить (заглушка)
+  // Выполнить циклическую задачу
   screen.querySelector('#tv-complete')?.addEventListener('click', () => {
-    alert('Выполнение задачи пока в разработке (заглушка)');
+    if (!isCyclic) return;
+    import('./completion-modal.js').then(({ openCompletionModal }) => {
+      openCompletionModal(task, activeMoodId, () => close());
+    });
   });
 
   // Редактировать

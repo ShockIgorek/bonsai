@@ -23,6 +23,9 @@ export function openBurgerMenu() {
     </div>
 
     <div class="burger-body" style="flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 12px;">
+      <button id="burger-log" class="btn-save" style="background: var(--bg-panel); color: var(--text-main); text-align: left; padding: 16px; font-size: 16px;">
+        Лог выполнения
+      </button>
       <button id="burger-export" class="btn-save" style="background: var(--bg-panel); color: var(--text-main); text-align: left; padding: 16px; font-size: 16px;">
         📤 Экспорт задач (JSON)
       </button>
@@ -43,6 +46,10 @@ export function openBurgerMenu() {
   document.getElementById('app').appendChild(screen);
 
   const close = () => screen.remove();
+
+  screen.querySelector('#burger-log').addEventListener('click', () => {
+    import('./log-view.js').then(module => module.openLogView());
+  });
 
   // Вспомогательная функция для скачивания
   function downloadFile(blob, fileName) {

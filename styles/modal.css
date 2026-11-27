@@ -129,6 +129,19 @@
   color: var(--danger);
 }
 
+/* Модалка выполнения циклической задачи */
+.completion-modal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--bg-main) 75%, transparent);
+}
+
 /* Описание задачи отдельной модалкой */
 .description-modal-overlay {
   position: absolute;

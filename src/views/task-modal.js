@@ -5,6 +5,7 @@ import { saveTasksTreeWithRecovery, isQuotaError } from '../utils/media-compacti
 import { timeToScore } from '../logic/task-metrics.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
 import { formatTaskDuration } from '../utils/format-time.js';
+import { getActiveTimer, stopTimer } from '../data/timer-store.js';
 
 function saveErrorMessage(err, subject) {
   if (err && (err.name === 'QuotaExceededError' || err.code === 22)) {
@@ -698,6 +699,18 @@ export function openDeleteTaskModal(task, onSaved) {
 
     try {
       await saveTasksTreeWithRecovery(tree);
+
+      // Не оставляем «призрачный» таймер у удалённой задачи или папки.
+      const activeTimer = getActiveTimer();
+      if (activeTimer) {
+        const stillExists = (function find(node) {
+          if (node.id === activeTimer.taskId) return true;
+          return (node.children || []).some(child => find(child));
+        })(tree);
+
+        if (!stillExists) stopTimer();
+      }
+
       close();
       if (typeof onSaved === 'function') onSaved();
     } catch (err) {

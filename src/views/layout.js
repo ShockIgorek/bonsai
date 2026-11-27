@@ -1,5 +1,7 @@
 import { getMoods } from '../data/moods-store.js';
 import { ICONS } from '../utils/icons.js';
+import { getActiveTimer, getTimerElapsedMs } from '../data/timer-store.js';
+import { formatTimerClock } from '../utils/format-time.js';
 
 export function renderLayout({ showTabs = true, showHeader = true } = {}) {
   const app = document.getElementById('app');
@@ -10,6 +12,10 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
   if (typeof window.__tinderCleanup === 'function') {
     window.__tinderCleanup();
     window.__tinderCleanup = null;
+  }
+  if (typeof window.__globalTimerCleanup === 'function') {
+    window.__globalTimerCleanup();
+    window.__globalTimerCleanup = null;
   }
 
   // Текущий режим (для подсветки таб-бара)
@@ -26,7 +32,10 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
       <header class="header">
         <button class="burger-menu" aria-label="Меню">☰</button>
         <button class="logo-btn" style="background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 700; color: var(--text-main); margin-left: 8px; padding: 8px 16px; font-family: inherit; flex: 1; text-align: left; transition: border-color 0.2s;">${activeMoodName}</button>
-        <div class="header-spacer"></div>
+        <button id="global-timer" class="global-timer" type="button" aria-label="Активный таймер">
+          ${ICONS.timer}
+          <span id="global-timer-value">0:00</span>
+        </button>
       </header>
       ` : ''}
 
@@ -41,6 +50,8 @@ export function renderLayout({ showTabs = true, showHeader = true } = {}) {
       ` : ''}
     </div>
   `;
+
+  mountGlobalTimer(app);
 
   // Обработчик бургер-меню (открывает меню импорта/экспорта)
   app.querySelector('.burger-menu')?.addEventListener('click', () => {
@@ -92,4 +103,54 @@ export function updateHeaderMoodName() {
   const activeMood = moods.find(m => m.id === activeMoodId) || moods[0];
 
   logo.textContent = activeMood ? activeMood.name : 'Bonsai';
+}
+
+function mountGlobalTimer(app) {
+  const button = app.querySelector('#global-timer');
+  const value = app.querySelector('#global-timer-value');
+  if (!button || !value) return;
+
+  const refresh = () => {
+    const timer = getActiveTimer();
+    if (!timer) {
+      button.style.display = 'none';
+      return;
+    }
+
+    button.style.display = 'inline-flex';
+    button.style.opacity = timer.isPaused ? '0.65' : '1';
+    value.textContent = formatTimerClock(getTimerElapsedMs(timer));
+    button.title = `${timer.isPaused ? 'Пауза' : 'Таймер'}: ${timer.taskName}`;
+  };
+
+  const handleClick = () => {
+    const timer = getActiveTimer();
+    if (!timer) return;
+
+    if (timer.taskPath && timer.taskPath.length) {
+      localStorage.setItem('bonsai-tinder-last-path', JSON.stringify(timer.taskPath));
+    }
+    if (timer.moodId) {
+      localStorage.setItem('bonsai-active-mood', timer.moodId);
+    }
+    localStorage.setItem('bonsai-current-mode', 'tinder');
+    import('../router.js').then(m => m.showMainView('tinder'));
+  };
+
+  const handleVisibility = () => {
+    if (!document.hidden) refresh();
+  };
+
+  button.addEventListener('click', handleClick);
+  window.addEventListener('bonsai-timer-change', refresh);
+  document.addEventListener('visibilitychange', handleVisibility);
+  const interval = window.setInterval(refresh, 1000);
+  refresh();
+
+  window.__globalTimerCleanup = () => {
+    window.clearInterval(interval);
+    window.removeEventListener('bonsai-timer-change', refresh);
+    document.removeEventListener('visibilitychange', handleVisibility);
+    button.removeEventListener('click', handleClick);
+  };
 }

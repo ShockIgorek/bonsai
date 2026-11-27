@@ -56,6 +56,35 @@ export function formatTaskDuration(duration) {
   return parts.join(' ');
 }
 
+/**
+ * Оценка времени из формы, не подменяя её фактическим замером.
+ */
+export function getTaskEstimateMinutes(duration) {
+  const estimated = Number(duration && duration.estimated);
+  if (Number.isFinite(estimated) && estimated > 0) return estimated;
+
+  const actual = Number(duration && duration.actual);
+  if (Number.isFinite(actual) && actual > 0) return actual;
+
+  return 20;
+}
+
+/**
+ * Секундомер: 05:12 или 1:05:12.
+ */
+export function formatTimerClock(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function formatCountdown(ms) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   const days = Math.floor(total / 86400);

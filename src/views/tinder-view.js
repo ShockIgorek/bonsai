@@ -8,6 +8,7 @@ import { createPriorityResolver } from '../data/mood-priorities.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
 import { getCooldownState, getLastCompletionAt } from '../logic/cyclic-schedule.js';
 import { getStreakSegments } from '../logic/streak.js';
+import { getActiveTimerForTask } from '../data/timer-store.js';
 
 // Стили для SVG внутри карточки
 const style = document.createElement('style');
@@ -243,6 +244,21 @@ export function renderTinderView() {
     const cardOpacity = isCooling ? cooldown.opacity : 1;
     const lastCompletedAt = getLastCompletionAt(leaf);
     const streak = getStreakSegments(leaf, Date.now());
+    const activeTimer = getActiveTimerForTask(leaf.id);
+    const timerIsPaused = !!(activeTimer && activeTimer.isPaused);
+    const canUseTimer = isCyclic || !!activeTimer;
+    const timerButtonBg = canUseTimer && activeTimer
+      ? (timerIsPaused ? 'var(--bg-panel)' : 'var(--accent)')
+      : 'var(--bg-panel)';
+    const timerButtonBorder = canUseTimer && activeTimer ? 'var(--accent)' : 'var(--border)';
+    const timerButtonGlow = canUseTimer && activeTimer && !timerIsPaused
+      ? '0 0 16px color-mix(in srgb, var(--accent) 55%, transparent)'
+      : 'none';
+    const timerButtonTitle = !canUseTimer
+      ? 'Таймер доступен для циклических задач'
+      : (activeTimer
+        ? (timerIsPaused ? 'Таймер на паузе' : 'Таймер идёт')
+        : 'Таймер');
 
     main.innerHTML = `
       <div class="tinder-view" style="position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; background: var(--bg-main);">
@@ -307,7 +323,7 @@ export function renderTinderView() {
             <!-- Кнопки (наполовину поверх картинки) -->
             <div style="display: flex; justify-content: space-evenly; align-items: center; margin-top: -32px; margin-bottom: 8px;">
               <button id="tinder-hide" class="tinder-action-btn" style="background: ${isNormalMode ? 'var(--bg-panel)' : 'var(--danger)'}; border: 3px solid ${isNormalMode ? 'var(--border)' : 'var(--danger)'}; color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; cursor: ${isNormalMode ? 'not-allowed' : 'pointer'}; display: flex; align-items: center; justify-content: center; opacity: ${isNormalMode ? '0.3' : '1'}; pointer-events: ${isNormalMode ? 'none' : 'auto'};" title="Скрыть">${ICONS.x}</button>
-              <button id="tinder-timer-main" class="tinder-action-btn" style="background: var(--bg-panel); border: 3px solid var(--border); color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Таймер">${ICONS.timer}</button>
+              <button id="tinder-timer-main" class="tinder-action-btn" style="background: ${timerButtonBg}; border: 3px solid ${timerButtonBorder}; color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; cursor: ${canUseTimer ? 'pointer' : 'not-allowed'}; display: flex; align-items: center; justify-content: center; box-shadow: ${timerButtonGlow}; opacity: ${canUseTimer ? '1' : '0.3'}; pointer-events: ${canUseTimer ? 'auto' : 'none'};" title="${timerButtonTitle}" ${canUseTimer ? '' : 'disabled'}>${ICONS.timer}</button>
               <button id="tinder-complete" class="tinder-action-btn" style="background: var(--accent); border: 3px solid var(--accent); color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; display: ${isCooling ? 'none' : 'flex'}; align-items: center; justify-content: center; opacity: ${isCyclic ? '1' : '0.3'}; pointer-events: ${isCyclic ? 'auto' : 'none'}; cursor: ${isCyclic ? 'pointer' : 'not-allowed'};" title="${isCyclic ? 'Выполнить' : 'Выполнение одноразовых пока недоступно'}" ${isCyclic ? '' : 'disabled'}>${ICONS.check}</button>
             </div>
 
@@ -454,7 +470,10 @@ export function renderTinderView() {
 
     main.querySelector('#tinder-timer-main')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      alert('Таймер в разработке');
+      if (!canUseTimer) return;
+      import('./timer-modal.js').then(({ openTimerModal }) => {
+        openTimerModal(leaf, activeMoodId, () => render());
+      });
     });
 
     // Все три метрики визуально одинаковы: высота, прозрачность и свечение по величине.

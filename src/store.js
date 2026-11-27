@@ -1,4 +1,6 @@
 import { getEffectiveDifficulty } from './logic/cyclic-schedule.js';
+import { getAverageActualMinutes } from './logic/task-time.js';
+import { timeToScore } from './logic/task-metrics.js';
 
 export function buildNavIndex(root) {
   const byId = new Map();
@@ -9,6 +11,10 @@ export function buildNavIndex(root) {
     const id = node.id || `n${++counter}`;
     const fullPath = [...path, node.name];
     const isLeaf = !node.children || node.children.length === 0;
+    const actualAverage = getAverageActualMinutes(node);
+    const duration = actualAverage !== null
+      ? { ...(node.duration || { estimated: null, actual: null }), actual: actualAverage }
+      : (node.duration || { estimated: null, actual: null });
     
     byId.set(id, {
       id,
@@ -18,8 +24,10 @@ export function buildNavIndex(root) {
       type: node.type || 'single',
       priority: node.priority !== undefined ? node.priority : 5.0,
       difficulty: getEffectiveDifficulty(node),
-      timeScore: node.timeScore !== undefined ? node.timeScore : 5.0,
-      duration: node.duration || { estimated: null, actual: null },
+      timeScore: actualAverage !== null
+        ? timeToScore(actualAverage)
+        : (node.timeScore !== undefined ? node.timeScore : 5.0),
+      duration,
       deadline: node.deadline || null,
       interval: node.interval || null,
       completionHistory: Array.isArray(node.completionHistory) ? node.completionHistory : [],

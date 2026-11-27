@@ -6,9 +6,10 @@ import { ICONS } from '../utils/icons.js';
 import { formatInterval, formatTaskDuration, formatCountdown, formatLastCompleted } from '../utils/format-time.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
-import { getCooldownState, getLastCompletionAt } from '../logic/cyclic-schedule.js';
+import { getCooldownState, getLastCompletionAt, getDifficultyRatings } from '../logic/cyclic-schedule.js';
 import { getStreakSegments } from '../logic/streak.js';
 import { getMoodSorting, scoreTask } from '../logic/tinder-ranking.js';
+import { getAverageActualMinutes } from '../logic/task-time.js';
 import { getActiveTimerForTask, stopTimer } from '../data/timer-store.js';
 import { completeSingleTask } from '../data/archive-store.js';
 import { isQuotaError } from '../utils/media-compaction.js';
@@ -40,6 +41,17 @@ style.textContent = `
     opacity: 0.72;
     text-shadow: 0 1px 2px rgba(0,0,0,0.8);
   }
+  .tinder-metric-source {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    opacity: 0.85;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+  .tinder-metric-source.is-fact { color: var(--accent); }
+  .tinder-metric-source.is-calibrated { color: var(--text-secondary); }
+  .tinder-metric-source.is-estimate { color: var(--text-muted); }
 `;
 document.head.appendChild(style);
 
@@ -131,7 +143,9 @@ export function renderTinderView() {
     const score = task => {
       const base = scoreTask({
         importance: priorityResolver.resolve(task.id),
-        timeScore: task.timeScore,
+        timeScore: task.sortTimeScore !== null && task.sortTimeScore !== undefined
+          ? task.sortTimeScore
+          : task.timeScore,
         difficulty: task.difficulty
       }, sorting);
 
@@ -258,6 +272,14 @@ export function renderTinderView() {
     const timerIsPaused = !!(activeTimer && activeTimer.isPaused);
     const canUseTimer = isCyclic || !!activeTimer;
     const canComplete = isCyclic || leaf.type === 'single';
+    const timeIsActual = getAverageActualMinutes(leaf) !== null;
+    const timeIsCalibrated = !!(leaf.duration && leaf.duration.calibrated);
+    const timeSource = timeIsActual ? 'факт' : (timeIsCalibrated ? 'калибровка' : 'оценка');
+    const timeSourceClass = timeIsActual ? 'is-fact' : (timeIsCalibrated ? 'is-calibrated' : 'is-estimate');
+    const difficultyIsActual = getDifficultyRatings(leaf).length > 0;
+    const difficultyIsCalibrated = !!leaf.difficultyCalibrated;
+    const difficultySource = difficultyIsActual ? 'факт' : (difficultyIsCalibrated ? 'калибровка' : 'оценка');
+    const difficultySourceClass = difficultyIsActual ? 'is-fact' : (difficultyIsCalibrated ? 'is-calibrated' : 'is-estimate');
     const timerButtonBg = canUseTimer && activeTimer
       ? (timerIsPaused ? 'var(--bg-panel)' : 'var(--accent)')
       : 'var(--bg-panel)';
@@ -306,6 +328,7 @@ export function renderTinderView() {
             <div class="tinder-metric" style="color: color-mix(in srgb, var(--accent) 40%, var(--text-main));">
               <span id="tinder-time-value" class="tinder-metric-value">${formatTaskDuration(leaf.duration)}</span>
               <span class="tinder-metric-label">время</span>
+              <span class="tinder-metric-source ${timeSourceClass}">${timeSource}</span>
             </div>
             <div class="tinder-metric" style="color: var(--accent);">
               <span id="tinder-priority-value" class="tinder-metric-value">${leafPriority.toFixed(1)}</span>
@@ -314,6 +337,7 @@ export function renderTinderView() {
             <div class="tinder-metric" style="color: color-mix(in srgb, var(--accent) 40%, var(--text-secondary));">
               <span id="tinder-difficulty-value" class="tinder-metric-value">${leafDifficulty.toFixed(1)}</span>
               <span class="tinder-metric-label">сложность</span>
+              <span class="tinder-metric-source ${difficultySourceClass}">${difficultySource}</span>
             </div>
           </div>
 

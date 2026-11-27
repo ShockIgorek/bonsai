@@ -19,7 +19,9 @@ function seedStorage() {
           name: 'Задача A',
           type: 'cyclic',
           image: 'data:image/png;base64,AAAA',
-          duration: { estimated: 20, actual: null },
+          duration: { estimated: 20, actual: null, calibrated: true },
+          sortTimeScore: 2.5,
+          difficultyCalibrated: true,
           completionHistory: [{ at: 1, difficulty: 5, actualMinutes: 20 }]
         },
         {
@@ -115,6 +117,9 @@ test('full backup can be restored into empty storage', () => {
   const archive = JSON.parse(memory.storage.getItem('bonsai-archive'));
 
   assert.equal(tree.children[0].name, 'Задача A');
+  assert.equal(tree.children[0].sortTimeScore, 2.5);
+  assert.equal(tree.children[0].difficultyCalibrated, true);
+  assert.equal(tree.children[0].duration.calibrated, true);
   assert.equal(moods[0].priorities['task-a'], 8);
   assert.deepEqual(moods[0].hiddenTasks, ['folder-b']);
   assert.equal(archive.length, 1);

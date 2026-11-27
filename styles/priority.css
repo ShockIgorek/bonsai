@@ -66,10 +66,52 @@
   transition: width 0.25s ease;
 }
 
+.priority-progress-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.priority-progress-scale span {
+  opacity: 0.45;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.priority-progress-scale span.is-reached {
+  opacity: 0.8;
+}
+
+.priority-progress-scale span.is-current {
+  color: var(--accent);
+  opacity: 1;
+}
+
 .priority-progress-text {
   margin-top: 6px;
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.priority-question {
+  flex-shrink: 0;
+  min-height: 54px;
+  padding: 16px 16px 0;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.3;
+  box-sizing: border-box;
+}
+
+.priority-question strong {
+  color: var(--accent);
+  font-weight: 800;
 }
 
 /* Вертикальный список карточек и кнопка «=» между ними */
@@ -89,7 +131,7 @@
   flex-shrink: 0;
   width: 100%;
   max-width: 420px;
-  height: 172px;
+  height: 190px;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -190,6 +232,47 @@
   font-size: 13px;
   line-height: 1.35;
   color: var(--text-secondary);
+}
+
+.priority-task-metric {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  min-width: 0;
+}
+
+.priority-task-metric-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.priority-task-metric-source {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.priority-task-metric-source.is-fact {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.priority-task-metric-source.is-calibrated {
+  color: var(--text-secondary);
+  border-color: var(--text-secondary);
+}
+
+.priority-task-metric-source.is-estimate {
+  color: var(--text-muted);
 }
 
 .priority-footer {

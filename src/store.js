@@ -15,6 +15,9 @@ export function buildNavIndex(root) {
     const duration = actualAverage !== null
       ? { ...(node.duration || { estimated: null, actual: null }), actual: actualAverage }
       : (node.duration || { estimated: null, actual: null });
+    const sortTimeScore = actualAverage === null && node.sortTimeScore !== undefined && node.sortTimeScore !== null
+      ? Number(node.sortTimeScore)
+      : null;
     
     byId.set(id, {
       id,
@@ -27,7 +30,9 @@ export function buildNavIndex(root) {
       timeScore: actualAverage !== null
         ? timeToScore(actualAverage)
         : (node.timeScore !== undefined ? node.timeScore : 5.0),
+      sortTimeScore,
       duration,
+      difficultyCalibrated: !!node.difficultyCalibrated,
       deadline: node.deadline || null,
       interval: node.interval || null,
       completionHistory: Array.isArray(node.completionHistory) ? node.completionHistory : [],

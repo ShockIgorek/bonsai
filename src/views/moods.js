@@ -2,7 +2,7 @@ import { getMoods } from '../data/moods-store.js';
 import { getTasksTree } from '../data/tasks-store.js';
 import { buildNavIndex } from '../store.js';
 import { ICONS } from '../utils/icons.js';
-import { getMoodSorting, getSortingPreferences } from '../logic/tinder-ranking.js';
+import { getMoodSorting, getSortingSummary } from '../logic/tinder-ranking.js';
 import { getMoodTopNodes } from '../logic/mood-summary.js';
 import { updateHeaderMoodName } from './layout.js';
 import { openMoodModal } from './mood-modal.js';
@@ -39,7 +39,7 @@ export function renderMoodsScreen({ startup = false } = {}) {
           const isActive = m.id === activeMoodId;
           const theme = m.theme || 'bonsai';
           const filter = getThemeFilter(theme);
-          const sortingPreferences = getSortingPreferences(getMoodSorting(m));
+          const sortingSummary = getSortingSummary(getMoodSorting(m));
           const topNodes = getMoodTopNodes(nav, m.id, 3);
 
           return `
@@ -56,21 +56,17 @@ export function renderMoodsScreen({ startup = false } = {}) {
               ${m.description ? `<span class="mood-desc">${escapeHtml(m.description)}</span>` : ''}
 
               <div class="mood-sorting">
-                <div class="mood-sorting-head">
-                  <span class="mood-sorting-title">Влияние на сортировку</span>
-                  <button class="mood-sorting-edit" type="button" data-sorting="${m.id}">Настроить</button>
+                <div class="mood-sorting-summary">
+                  <span class="mood-sorting-prefix">Сначала:</span>
+                  ${sortingSummary.map((item, index) => `
+                    <span class="mood-sorting-word ${index === 0 ? 'is-top' : ''}">${escapeHtml(item.word)}</span>${index < sortingSummary.length - 1 ? '<span class="mood-sorting-arrow">→</span>' : ''}
+                  `).join('')}
                 </div>
-                ${sortingPreferences.map((preference, index) => `
-                  <div class="mood-sorting-row ${index === 0 ? 'is-top' : ''}" title="${escapeHtml(preference.label)}: ${escapeHtml(preference.directionLabel)} (${Math.round(preference.share * 100)}%)">
-                    <span class="mood-sorting-label">${escapeHtml(preference.label)}</span>
-                    <span class="mood-sorting-hint">${escapeHtml(preference.directionLabel)}</span>
-                    <span class="mood-sorting-share">${Math.round(preference.share * 100)}%</span>
-                  </div>
-                `).join('')}
+                <button class="mood-sorting-edit" type="button" data-sorting="${m.id}">Настроить</button>
               </div>
 
               <div class="mood-top">
-                <div class="mood-top-title">Сейчас выше</div>
+                <div class="mood-top-title">Сейчас в фокусе</div>
                 <div class="mood-top-list">
                   ${topNodes.length
                     ? topNodes.map(node => escapeHtml(node.name)).join(' · ')

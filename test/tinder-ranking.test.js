@@ -4,7 +4,8 @@ import {
   DEFAULT_SORTING,
   getMoodSorting,
   scoreTask,
-  getSortingPreferences
+  getSortingPreferences,
+  getSortingSummary
 } from '../src/logic/tinder-ranking.js';
 
 test('default sorting is importance 60%, speed 25%, difficulty 15%', () => {
@@ -50,6 +51,29 @@ test('long-first time direction renames speed to duration', () => {
 
   assert.equal(preferences.find(item => item.key === 'time').label, 'Длительность');
   assert.equal(preferences.find(item => item.key === 'time').directionLabel, 'дольше');
+});
+
+test('sorting summary explains preferences in plain words', () => {
+  assert.deepEqual(
+    getSortingSummary(DEFAULT_SORTING).map(item => item.word),
+    ['важные', 'короткие', 'простые']
+  );
+
+  assert.deepEqual(
+    getSortingSummary({
+      weights: { importance: 0.2, time: 0.4, difficulty: 0.4 },
+      directions: { importance: -1, time: -1, difficulty: -1 }
+    }).map(item => item.word),
+    ['короткие', 'простые', 'менее важные']
+  );
+
+  assert.deepEqual(
+    getSortingSummary({
+      weights: { importance: 0.4, time: 0.3, difficulty: 0.3 },
+      directions: { importance: 1, time: 1, difficulty: 1 }
+    }).map(item => item.word),
+    ['важные', 'длинные', 'сложные']
+  );
 });
 
 test('custom mood weights and directions override defaults', () => {

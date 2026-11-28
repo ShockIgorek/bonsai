@@ -268,25 +268,43 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
   padding-top: 6px;
   border-top: 1px solid var(--border);
 }
 
-.mood-sorting-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+.mood-sorting-summary {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+
+.mood-sorting-prefix {
+  color: var(--text-muted);
+}
+
+.mood-sorting-word {
+  color: var(--text-secondary);
+}
+
+.mood-sorting-word.is-top {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.mood-sorting-arrow {
+  color: var(--text-muted);
+  margin: 0 3px;
 }
 
 .mood-sorting-edit {
+  align-self: flex-start;
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px 0 0;
   color: var(--accent);
   font-family: inherit;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -295,50 +313,12 @@
   text-decoration: underline;
 }
 
-.mood-sorting-title,
 .mood-top-title {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.3px;
   text-transform: uppercase;
   color: var(--text-muted);
-}
-
-.mood-sorting-row {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.mood-sorting-row.is-top {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.mood-sorting-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mood-sorting-hint {
-  font-size: 9px;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.mood-sorting-row.is-top .mood-sorting-hint {
-  color: color-mix(in srgb, var(--accent) 70%, var(--text-muted));
-}
-
-.mood-sorting-share {
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .mood-top {

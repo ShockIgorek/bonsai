@@ -11,6 +11,12 @@ export const DEFAULT_SORTING = {
   }
 };
 
+const SUMMARY_WORDS = {
+  importance: { positive: 'важные', negative: 'менее важные' },
+  time: { positive: 'длинные', negative: 'короткие' },
+  difficulty: { positive: 'сложные', negative: 'простые' }
+};
+
 const CRITERIA = [
   {
     key: 'importance',
@@ -138,4 +144,15 @@ export function getSortingPreferences(sorting = DEFAULT_SORTING) {
       };
     })
     .sort((a, b) => b.share - a.share);
+}
+
+/**
+ * Человеческая расшифровка влияния: «важные → короткие → простые».
+ */
+export function getSortingSummary(sorting = DEFAULT_SORTING) {
+  return getSortingPreferences(sorting).map(preference => ({
+    key: preference.key,
+    word: SUMMARY_WORDS[preference.key][preference.direction > 0 ? 'positive' : 'negative'],
+    share: preference.share
+  }));
 }

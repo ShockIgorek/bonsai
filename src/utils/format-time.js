@@ -101,7 +101,7 @@ export function formatCountdown(ms) {
   return parts.join(' ');
 }
 
-export function formatLastCompleted(timestamp) {
+export function formatShortDateTime(timestamp) {
   if (!timestamp) return '—';
   return new Date(timestamp).toLocaleString('ru-RU', {
     day: '2-digit',
@@ -109,6 +109,10 @@ export function formatLastCompleted(timestamp) {
     hour: '2-digit',
     minute: '2-digit'
   });
+}
+
+export function formatLastCompleted(timestamp) {
+  return formatShortDateTime(timestamp);
 }
 
 export function formatDateTime(timestamp) {

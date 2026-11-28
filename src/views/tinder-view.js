@@ -3,13 +3,14 @@ import { getTasksTree } from '../data/tasks-store.js';
 import { getMoods, isTaskHiddenForMood, hideTaskForMood } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 import { ICONS } from '../utils/icons.js';
-import { formatInterval, formatTaskDuration, formatCountdown, formatLastCompleted } from '../utils/format-time.js';
+import { formatInterval, formatTaskDuration, formatCountdown, formatLastCompleted, formatShortDateTime } from '../utils/format-time.js';
 import { createPriorityResolver } from '../data/mood-priorities.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
 import { getCooldownState, getLastCompletionAt, getDifficultyRatings } from '../logic/cyclic-schedule.js';
 import { getStreakSegments } from '../logic/streak.js';
 import { getMoodSorting, scoreTask } from '../logic/tinder-ranking.js';
 import { getAverageActualMinutes } from '../logic/task-time.js';
+import { cooldownPercent, cooldownShadeBackground } from '../utils/cooldown-display.js';
 import { getActiveTimerForTask, stopTimer } from '../data/timer-store.js';
 import { completeSingleTask } from '../data/archive-store.js';
 import { isQuotaError } from '../utils/media-compaction.js';
@@ -308,6 +309,12 @@ export function renderTinderView() {
             }
             <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 18%; background: linear-gradient(to bottom, transparent, var(--bg-main));"></div>
 
+            <!-- Радиальный кулдаун поверх картинки -->
+            <div
+              id="tinder-cooldown-shade"
+              style="position: absolute; inset: 0; z-index: 2; pointer-events: none; background: ${isCooling ? cooldownShadeBackground(cooldown.ratio) : 'transparent'}; transition: background 0.3s linear;"
+            ></div>
+
             <!-- Полоса серии: последние 10 циклов -->
             ${isCyclic ? `
               <div id="tinder-streak" style="position: absolute; bottom: 40px; left: 0; right: 0; display: flex; gap: 2px; z-index: 3;">
@@ -315,9 +322,17 @@ export function renderTinderView() {
               </div>
 
               <!-- Время восстановления — по центру картинки -->
-              <div style="position: absolute; top: 50%; left: 16px; right: 16px; transform: translateY(-50%); z-index: 4; display: flex; justify-content: center; pointer-events: none;">
-                <div id="tinder-countdown" style="display: ${isCooling ? 'block' : 'none'}; padding: 8px 14px; border-radius: 14px; background: color-mix(in srgb, var(--bg-main) 72%, transparent); color: var(--accent); font-size: 17px; font-weight: 800; line-height: 1.2; text-align: center; letter-spacing: 0.2px; text-shadow: 0 1px 4px rgba(0,0,0,0.8); box-shadow: 0 4px 16px rgba(0,0,0,0.25);">
-                  ${isCooling ? `до восстановления ${formatCountdown(cooldown.remainingMs)}` : ''}
+              <div
+                id="tinder-cooldown"
+                style="display: ${isCooling ? 'flex' : 'none'}; position: absolute; top: 50%; left: 16px; right: 16px; transform: translateY(-50%); z-index: 4; justify-content: center; pointer-events: none;"
+              >
+                <div style="padding: 9px 14px; border-radius: 16px; background: color-mix(in srgb, var(--bg-main) 76%, transparent); text-align: center; box-shadow: 0 4px 18px rgba(0,0,0,0.3); backdrop-filter: blur(3px);">
+                  <div id="tinder-restore-at" style="font-size: 11px; line-height: 1.25; color: var(--text-secondary); margin-bottom: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
+                    ${isCooling ? `восстановится ${formatShortDateTime(cooldown.nextAt)} · ${cooldownPercent(cooldown.ratio)}%` : ''}
+                  </div>
+                  <div id="tinder-countdown" style="color: var(--accent); font-size: 17px; font-weight: 800; line-height: 1.2; letter-spacing: 0.2px; text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
+                    ${isCooling ? `до восстановления ${formatCountdown(cooldown.remainingMs)}` : ''}
+                  </div>
                 </div>
               </div>
             ` : ''}
@@ -561,10 +576,22 @@ export function renderTinderView() {
 
       wasCooling = true;
 
+      const cooldownEl = main.querySelector('#tinder-cooldown');
+      if (cooldownEl) cooldownEl.style.display = 'flex';
+
+      const restoreAtEl = main.querySelector('#tinder-restore-at');
+      if (restoreAtEl) {
+        restoreAtEl.textContent = `восстановится ${formatShortDateTime(state.nextAt)} · ${cooldownPercent(state.ratio)}%`;
+      }
+
       const countdownEl = main.querySelector('#tinder-countdown');
       if (countdownEl) {
-        countdownEl.style.display = 'block';
         countdownEl.textContent = `до восстановления ${formatCountdown(state.remainingMs)}`;
+      }
+
+      const shadeEl = main.querySelector('#tinder-cooldown-shade');
+      if (shadeEl) {
+        shadeEl.style.background = cooldownShadeBackground(state.ratio);
       }
 
       const photoEl = main.querySelector('#tinder-photo');

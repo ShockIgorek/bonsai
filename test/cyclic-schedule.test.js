@@ -75,6 +75,20 @@ test('restored task keeps 1.25 bonus until 150%', () => {
   assert.equal(late.bonusActive, false);
 });
 
+test('bonus window reports when it ends', () => {
+  const task = makeTask({ history: [{ hours: 0 }] });
+
+  const bonus = getCooldownState(task, BASE + 24 * H);
+  assert.equal(bonus.bonusActive, true);
+  assert.equal(bonus.bonusEndsAt, BASE + 30 * H);
+  assert.equal(bonus.bonusRemainingMs, 6 * H);
+
+  const expired = getCooldownState(task, BASE + 31 * H);
+  assert.equal(expired.bonusActive, false);
+  assert.equal(expired.bonusEndsAt, null);
+  assert.equal(expired.bonusRemainingMs, 0);
+});
+
 test('average difficulty uses last 10 ratings', () => {
   const task = makeTask({
     history: Array.from({ length: 12 }, (_, index) => ({

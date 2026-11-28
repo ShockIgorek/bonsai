@@ -55,6 +55,8 @@ style.textContent = `
   .tinder-metric-source.is-estimate { color: var(--text-muted); }
   .tinder-bonus-badge {
     display: inline-block;
+    max-width: 100%;
+    box-sizing: border-box;
     margin-bottom: 5px;
     padding: 2px 8px;
     border: 1px solid var(--accent);
@@ -63,8 +65,8 @@ style.textContent = `
     background: color-mix(in srgb, var(--accent) 10%, transparent);
     font-size: 10px;
     font-weight: 800;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
+    letter-spacing: 0.1px;
+    line-height: 1.3;
   }
 `;
 document.head.appendChild(style);
@@ -280,6 +282,9 @@ export function renderTinderView() {
     const cooldown = getCooldownState(leaf, Date.now());
     const isCooling = isCyclic && cooldown.isCooling;
     const isBonus = isCyclic && !isCooling && !!cooldown.bonusActive;
+    const bonusUntil = isBonus && cooldown.bonusEndsAt
+      ? ` до ${formatShortDateTime(cooldown.bonusEndsAt)}`
+      : '';
     const cardOpacity = isCooling ? cooldown.opacity : 1;
     const lastCompletedAt = getLastCompletionAt(leaf);
     const streak = getStreakSegments(leaf, Date.now());
@@ -408,7 +413,7 @@ export function renderTinderView() {
 
             <!-- Текст -->
             <div id="tinder-text" style="opacity: ${cardOpacity}; transition: opacity 0.3s;">
-              ${isBonus ? `<div class="tinder-bonus-badge" title="Таймер восстановления завершён: приоритет повышен на 25%">бонус +25%</div>` : ''}
+              ${isBonus ? `<div class="tinder-bonus-badge" title="Бонус +25% действует${bonusUntil}. После этого приоритет вернётся к обычному.">бонус +25%${bonusUntil}</div>` : ''}
               <h2 style="font-size: 28px; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${leaf.name}</h2>
               <div class="tinder-meta" style="display: flex; gap: 12px; font-size: 14px; color: var(--text-secondary); align-items: center; margin-bottom: 8px;">
                 <span title="${leaf.type === 'cyclic' ? 'Циклическая' : 'Одноразовая'}">${leaf.type === 'cyclic' ? ICONS.cyclic : ICONS.single}</span>

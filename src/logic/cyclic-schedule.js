@@ -41,7 +41,9 @@ export function getCooldownState(task, now = Date.now()) {
       opacity: 1,
       remainingMs: 0,
       nextAt: null,
-      lastAt
+      lastAt,
+      bonusEndsAt: null,
+      bonusRemainingMs: 0
     };
   }
 
@@ -62,11 +64,14 @@ export function getCooldownState(task, now = Date.now()) {
       opacity,
       remainingMs: Math.max(0, nextAt - now),
       nextAt,
-      lastAt
+      lastAt,
+      bonusEndsAt: null,
+      bonusRemainingMs: 0
     };
   }
 
   const bonusActive = ratio < BONUS_WINDOW_END;
+  const bonusEndsAt = bonusActive ? lastAt + intervalMs * BONUS_WINDOW_END : null;
   return {
     hasSchedule: true,
     isCooling: false,
@@ -76,7 +81,9 @@ export function getCooldownState(task, now = Date.now()) {
     remainingMs: 0,
     nextAt,
     lastAt,
-    bonusActive
+    bonusActive,
+    bonusEndsAt,
+    bonusRemainingMs: bonusEndsAt ? Math.max(0, bonusEndsAt - now) : 0
   };
 }
 

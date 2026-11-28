@@ -12,7 +12,6 @@ import {
 } from '../data/timer-store.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
 import {
-  formatLastCompleted,
   formatTimerClock,
   formatTaskDuration,
   getTaskEstimateMinutes
@@ -30,8 +29,7 @@ function escapeHtml(value) {
 
 /**
  * Модалка выполнения циклической задачи.
- * Оценка сложности опциональна; показываем среднее последних 10.
- * Время: таймер или ручное значение с предзаполнением оценкой.
+ * Сложность опциональна, время можно поправить большими кнопками.
  */
 export function openCompletionModal(task, moodId, onDone) {
   const average = getAverageDifficulty(task);
@@ -40,10 +38,8 @@ export function openCompletionModal(task, moodId, onDone) {
     : (Number.isFinite(Number(task.difficulty)) ? Number(task.difficulty) : 5);
 
   const estimateMinutes = getTaskEstimateMinutes(task.duration);
-  const prefillMinutes = Math.max(0.5, Math.round(estimateMinutes * 10) / 10);
+  const prefillMinutes = Math.max(1, Math.round(estimateMinutes));
 
-  // Фиксируем замер в момент открытия модалки: время, потраченное
-  // на оценку сложности, не должно попадать в фактическое время.
   let activeTimer = getActiveTimerForTask(task.id);
   const resumeAfterCancel = !!(activeTimer && !activeTimer.isPaused);
   if (resumeAfterCancel) {
@@ -54,7 +50,7 @@ export function openCompletionModal(task, moodId, onDone) {
   const overlay = document.createElement('div');
   overlay.className = 'completion-modal-overlay';
   overlay.innerHTML = `
-    <div class="modal-card">
+    <div class="modal-card completion-modal">
       <div class="modal-header">
         <h2 class="modal-title">Выполнить задачу</h2>
         <button class="modal-close" type="button" data-action="close" aria-label="Закрыть">×</button>
@@ -62,71 +58,68 @@ export function openCompletionModal(task, moodId, onDone) {
 
       <div class="modal-body">
         <div>
-          <div style="font-size: 18px; font-weight: 800; line-height: 1.25;">${escapeHtml(task.name)}</div>
-          ${task.path && task.path.length ? `<div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">${escapeHtml(task.path.slice(0, -1).join(' / '))}</div>` : ''}
+          <div class="completion-task-name">${escapeHtml(task.name)}</div>
+          ${task.path && task.path.length ? `<div class="completion-task-path">${escapeHtml(task.path.slice(0, -1).join(' / '))}</div>` : ''}
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--bg-main); border: 1px solid var(--border);">
-          <div class="task-metric-label" style="color: var(--text-secondary);">Время</div>
+        <div class="completion-section">
+          <div class="completion-section-title">Время</div>
 
           ${activeTimer ? `
-            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
-              <span style="font-size: 13px; color: var(--text-secondary);">По таймеру</span>
-              <strong id="completion-timer-display" style="font-size: 22px; font-variant-numeric: tabular-nums; color: var(--text-main);">${formatTimerClock(getTimerElapsedMs(activeTimer))}</strong>
+            <div class="completion-timer-line">
+              <span>По таймеру</span>
+              <strong id="completion-timer-display">${formatTimerClock(getTimerElapsedMs(activeTimer))}</strong>
             </div>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-main);">
-              <input id="completion-use-timer" type="checkbox" checked style="width: 16px; height: 16px; accent-color: var(--accent);" />
+            <label class="completion-check">
+              <input id="completion-use-timer" type="checkbox" checked />
               Использовать это время
             </label>
           ` : ''}
 
-          <div id="completion-manual-time" style="display: ${activeTimer ? 'none' : 'flex'}; flex-direction: column; gap: 6px;">
-            <label for="completion-actual-minutes" style="font-size: 12px; color: var(--text-secondary);">Фактическое время, мин</label>
-            <input id="completion-actual-minutes" class="input-field" type="number" min="0" step="0.5" inputmode="decimal" value="${prefillMinutes}" />
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
-              <input id="completion-save-time" type="checkbox" checked style="width: 16px; height: 16px; accent-color: var(--accent);" />
+          <div id="completion-manual-time" style="display: ${activeTimer ? 'none' : 'block'};">
+            <div class="completion-time-stepper">
+              <button type="button" data-action="time-minus" aria-label="Уменьшить время">−</button>
+              <input id="completion-actual-minutes" type="number" min="0" step="1" inputmode="decimal" value="${prefillMinutes}" />
+              <span class="completion-time-unit">мин</span>
+              <button type="button" data-action="time-plus" aria-label="Увеличить время">+</button>
+            </div>
+            <div class="completion-time-hint">Оценка: ${formatTaskDuration({ estimated: estimateMinutes })}</div>
+            <label class="completion-check">
+              <input id="completion-save-time" type="checkbox" checked />
               Записать как фактическое
             </label>
           </div>
-
-          <div style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
-            ${activeTimer
-              ? 'Таймер остановится после сохранения.'
-              : `Оценка: ${formatTaskDuration({ estimated: estimateMinutes })}. Если время не замеряли, сними галочку — останется оценка.`}
-          </div>
         </div>
 
-        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.4;">
-          Средняя сложность за последние 10: <strong style="color: var(--text-main);">${average !== null ? `${average.toFixed(1)} / 10` : '—'}</strong>
-          ${task.completionHistory && task.completionHistory.length ? `<br>Последнее выполнение: ${formatLastCompleted(task.completionHistory[task.completionHistory.length - 1].at)}` : ''}
-        </div>
-
-        <div class="task-metric-editor" style="color: color-mix(in srgb, var(--accent) 40%, var(--text-secondary));">
-          <div class="task-metric-label">Сложность сейчас</div>
-          <div class="task-metric-row">
+        <div class="completion-section">
+          <div class="completion-section-title">Сложность</div>
+          <div class="completion-difficulty-row">
             <button class="task-metric-btn" type="button" data-action="minus">−</button>
             <span id="completion-difficulty" class="task-metric-value">${difficulty.toFixed(1)}</span>
             <button class="task-metric-btn" type="button" data-action="plus">+</button>
           </div>
-        </div>
-
-        <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
-          Оценка заменит субъективную сложность. Можно пропустить — тогда останется среднее.
+          <label class="completion-check">
+            <input id="completion-skip-difficulty" type="checkbox" />
+            Не оценивать сложность
+          </label>
         </div>
       </div>
 
-      <div class="modal-footer" style="display: flex; gap: 8px;">
-        <button class="btn-save" type="button" data-action="cancel" style="flex: 1; background: var(--bg-panel); color: var(--text-main);">Отмена</button>
-        <button class="btn-save" type="button" data-action="skip" style="flex: 1; background: var(--bg-panel); color: var(--text-secondary);">Пропустить</button>
-        <button class="btn-save" type="button" data-action="complete" style="flex: 1;">Выполнить</button>
+      <div class="modal-footer completion-footer">
+        <button class="btn-save completion-cancel" type="button" data-action="cancel">Отмена</button>
+        <button class="btn-save completion-submit" type="button" data-action="complete">Выполнить</button>
       </div>
     </div>
   `;
   document.getElementById('app').appendChild(overlay);
 
   const difficultyEl = overlay.querySelector('#completion-difficulty');
+  const minusBtn = overlay.querySelector('[data-action="minus"]');
+  const plusBtn = overlay.querySelector('[data-action="plus"]');
+  const skipDifficultyEl = overlay.querySelector('#completion-skip-difficulty');
   const useTimerEl = overlay.querySelector('#completion-use-timer');
   const manualTimeEl = overlay.querySelector('#completion-manual-time');
+  const timeInput = overlay.querySelector('#completion-actual-minutes');
   let timerInterval = null;
   let saving = false;
 
@@ -143,9 +136,23 @@ export function openCompletionModal(task, moodId, onDone) {
     applyMetricStyle(difficultyEl, difficulty);
   }
 
+  function refreshDifficultyState() {
+    const skipped = skipDifficultyEl.checked;
+    minusBtn.disabled = skipped;
+    plusBtn.disabled = skipped;
+    minusBtn.style.opacity = skipped ? '0.35' : '';
+    plusBtn.style.opacity = skipped ? '0.35' : '';
+
+    if (skipped) {
+      difficultyEl.style.opacity = '0.35';
+    } else {
+      applyMetricStyle(difficultyEl, difficulty);
+    }
+  }
+
   if (useTimerEl) {
     useTimerEl.addEventListener('change', () => {
-      manualTimeEl.style.display = useTimerEl.checked ? 'none' : 'flex';
+      manualTimeEl.style.display = useTimerEl.checked ? 'none' : 'block';
     });
 
     timerInterval = window.setInterval(() => {
@@ -170,14 +177,13 @@ export function openCompletionModal(task, moodId, onDone) {
     const saveTimeEl = overlay.querySelector('#completion-save-time');
     if (!saveTimeEl || !saveTimeEl.checked) return null;
 
-    const input = overlay.querySelector('#completion-actual-minutes');
-    const value = Number(input && input.value);
+    const value = Number(timeInput && timeInput.value);
     if (!Number.isFinite(value) || value <= 0) return null;
 
     return Math.max(0.05, Math.round(value * 10) / 10);
   }
 
-  async function saveCompletion(rating) {
+  async function saveCompletion() {
     if (saving) return;
 
     const timerForConfirm = getActiveTimerForTask(task.id);
@@ -194,6 +200,7 @@ export function openCompletionModal(task, moodId, onDone) {
     try {
       const now = Date.now();
       const actualMinutes = getActualMinutesForSave();
+      const rating = skipDifficultyEl.checked ? null : difficulty;
       const tree = getTasksTree();
 
       function findById(node) {
@@ -239,21 +246,35 @@ export function openCompletionModal(task, moodId, onDone) {
     }
   }
 
+  overlay.querySelector('[data-action="time-minus"]').addEventListener('click', () => {
+    const value = Number(timeInput.value) || 0;
+    timeInput.value = String(Math.max(0, value - 1));
+  });
+
+  overlay.querySelector('[data-action="time-plus"]').addEventListener('click', () => {
+    const value = Number(timeInput.value) || 0;
+    timeInput.value = String(value + 1);
+  });
+
   overlay.querySelector('[data-action="close"]').addEventListener('click', close);
   overlay.querySelector('[data-action="cancel"]').addEventListener('click', close);
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) close();
   });
 
-  overlay.querySelector('[data-action="minus"]').addEventListener('click', () => {
+  minusBtn.addEventListener('click', () => {
+    if (skipDifficultyEl.checked) return;
     difficulty = Math.max(0, difficulty - 0.5);
     refreshDifficulty();
   });
-  overlay.querySelector('[data-action="plus"]').addEventListener('click', () => {
+  plusBtn.addEventListener('click', () => {
+    if (skipDifficultyEl.checked) return;
     difficulty = Math.min(10, difficulty + 0.5);
     refreshDifficulty();
   });
+  skipDifficultyEl.addEventListener('change', refreshDifficultyState);
 
-  overlay.querySelector('[data-action="skip"]').addEventListener('click', () => saveCompletion(null));
-  overlay.querySelector('[data-action="complete"]').addEventListener('click', () => saveCompletion(difficulty));
+  overlay.querySelector('[data-action="complete"]').addEventListener('click', saveCompletion);
+
+  refreshDifficultyState();
 }

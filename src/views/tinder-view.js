@@ -53,6 +53,19 @@ style.textContent = `
   .tinder-metric-source.is-fact { color: var(--accent); }
   .tinder-metric-source.is-calibrated { color: var(--text-secondary); }
   .tinder-metric-source.is-estimate { color: var(--text-muted); }
+  .tinder-bonus-badge {
+    display: inline-block;
+    margin-bottom: 5px;
+    padding: 2px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 7px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
 `;
 document.head.appendChild(style);
 
@@ -266,6 +279,7 @@ export function renderTinderView() {
     const isCyclic = leaf.type === 'cyclic';
     const cooldown = getCooldownState(leaf, Date.now());
     const isCooling = isCyclic && cooldown.isCooling;
+    const isBonus = isCyclic && !isCooling && !!cooldown.bonusActive;
     const cardOpacity = isCooling ? cooldown.opacity : 1;
     const lastCompletedAt = getLastCompletionAt(leaf);
     const streak = getStreakSegments(leaf, Date.now());
@@ -297,7 +311,7 @@ export function renderTinderView() {
     main.innerHTML = `
       <div class="tinder-view" style="position: relative; width: 100%; height: 100%; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; background: var(--bg-main);">
 
-        <div id="tinder-card" class="tinder-card" style="position: absolute; inset: 0; display: flex; flex-direction: column; cursor: grab; user-select: none; transition: transform 0.3s ease-out; z-index: 1;">
+        <div id="tinder-card" class="tinder-card" style="position: absolute; inset: 0; display: flex; flex-direction: column; cursor: grab; user-select: none; transition: transform 0.3s ease-out; z-index: 1; ${isBonus ? 'box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent), inset 0 0 28px color-mix(in srgb, var(--accent) 12%, transparent);' : ''}">
 
           <!-- Картинка (до середины кнопок) -->
           <div style="flex: 1; min-height: 0; position: relative; overflow: hidden;">
@@ -394,6 +408,7 @@ export function renderTinderView() {
 
             <!-- Текст -->
             <div id="tinder-text" style="opacity: ${cardOpacity}; transition: opacity 0.3s;">
+              ${isBonus ? `<div class="tinder-bonus-badge" title="Таймер восстановления завершён: приоритет повышен на 25%">бонус +25%</div>` : ''}
               <h2 style="font-size: 28px; font-weight: 800; color: var(--text-main); margin: 0 0 8px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${leaf.name}</h2>
               <div class="tinder-meta" style="display: flex; gap: 12px; font-size: 14px; color: var(--text-secondary); align-items: center; margin-bottom: 8px;">
                 <span title="${leaf.type === 'cyclic' ? 'Циклическая' : 'Одноразовая'}">${leaf.type === 'cyclic' ? ICONS.cyclic : ICONS.single}</span>
@@ -568,6 +583,7 @@ export function renderTinderView() {
     // Таймер, прозрачность и полоса серии обновляются каждую секунду,
     // порядок колоды — раз в минуту, чтобы карточка не прыгала под пальцем.
     let wasCooling = isCooling;
+    let wasBonus = isBonus;
 
     const tick = () => {
       const current = leaves[currentIndex];
@@ -576,14 +592,17 @@ export function renderTinderView() {
       const state = getCooldownState(current, Date.now());
 
       if (!state.isCooling) {
-        if (wasCooling) {
+        const bonusNow = !!state.bonusActive;
+        if (wasCooling || bonusNow !== wasBonus) {
           wasCooling = false;
+          wasBonus = bonusNow;
           render();
         }
         return;
       }
 
       wasCooling = true;
+      wasBonus = false;
 
       const cooldownEl = main.querySelector('#tinder-cooldown');
       if (cooldownEl) cooldownEl.style.display = 'flex';

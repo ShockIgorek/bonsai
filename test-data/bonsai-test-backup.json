@@ -1,0 +1,411 @@
+{
+  "app": "bonsai",
+  "kind": "full-backup",
+  "version": 1,
+  "exportedAt": "2026-11-28T00:00:00.000Z",
+  "buildId": "manual-test-v1",
+  "includesImages": false,
+  "data": {
+    "tasksTree": {
+      "id": "root",
+      "name": "Тестовое дерево",
+      "children": [
+        {
+          "id": "branch-quick",
+          "name": "01 Скорость",
+          "children": [
+            {
+              "id": "test-quick-easy",
+              "name": "Быстрая лёгкая",
+              "desc": "5 минут, сложность 2. Должна быть высоко в «Устал».",
+              "type": "cyclic",
+              "priority": 6,
+              "difficulty": 2,
+              "timeScore": 0.2,
+              "image": "",
+              "duration": { "estimated": 5, "actual": null },
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": []
+            },
+            {
+              "id": "test-quick-hard",
+              "name": "Быстрая сложная",
+              "desc": "5 минут, сложность 8. Проверка направления сложности.",
+              "type": "cyclic",
+              "priority": 6,
+              "difficulty": 8,
+              "timeScore": 0.2,
+              "image": "",
+              "duration": { "estimated": 5, "actual": null },
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": []
+            },
+            {
+              "id": "test-long-easy",
+              "name": "Долгая лёгкая",
+              "desc": "60 минут, сложность 2. Проверка скорости.",
+              "type": "cyclic",
+              "priority": 5,
+              "difficulty": 2,
+              "timeScore": 2.5,
+              "image": "",
+              "duration": { "estimated": 60, "actual": null },
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": []
+            },
+            {
+              "id": "test-long-hard",
+              "name": "Долгая сложная",
+              "desc": "60 минут, сложность 8. Должна быть высоко в «Я машина».",
+              "type": "cyclic",
+              "priority": 5,
+              "difficulty": 8,
+              "timeScore": 2.5,
+              "image": "",
+              "duration": { "estimated": 60, "actual": null },
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": []
+            }
+          ]
+        },
+        {
+          "id": "branch-priority",
+          "name": "02 Важность",
+          "children": [
+            {
+              "id": "test-important",
+              "name": "Важная задача",
+              "desc": "Высокая важность, 20 минут, сложность 5.",
+              "type": "cyclic",
+              "priority": 9,
+              "difficulty": 5,
+              "timeScore": 0.8,
+              "image": "",
+              "duration": { "estimated": 20, "actual": null },
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": []
+            },
+            {
+              "id": "test-unimportant",
+              "name": "Менее важная",
+              "desc": "Низкая важность, 20 минут, сложность 5.",
+              "type": "cyclic",
+              "priority": 3,
+              "difficulty": 5,
+              "timeScore": 0.8,
+              "image": "",
+              "duration": { "estimated": 20, "actual": null },
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": []
+            }
+          ]
+        },
+        {
+          "id": "branch-mechanics",
+          "name": "03 Механики",
+          "children": [
+            {
+              "id": "test-cooldown",
+              "name": "Кулдаун 1 минута",
+              "desc": "Выполни и смотри прозрачность, таймер и повтор.",
+              "type": "cyclic",
+              "priority": 6,
+              "difficulty": 3,
+              "timeScore": 0.2,
+              "image": "",
+              "duration": { "estimated": 5, "actual": null },
+              "interval": { "totalMinutes": 1 },
+              "completionHistory": []
+            },
+            {
+              "id": "test-streak",
+              "name": "Серия 1 минута",
+              "desc": "Выполняй повторно с разными интервалами: 1, 1.5, 2 минуты.",
+              "type": "cyclic",
+              "priority": 6,
+              "difficulty": 3,
+              "timeScore": 0.2,
+              "image": "",
+              "duration": { "estimated": 5, "actual": null },
+              "interval": { "totalMinutes": 1 },
+              "completionHistory": []
+            },
+            {
+              "id": "test-timer",
+              "name": "Таймер",
+              "desc": "Запусти таймер, сверни приложение, вернись и заверши.",
+              "type": "cyclic",
+              "priority": 6,
+              "difficulty": 4,
+              "timeScore": 0.4,
+              "image": "",
+              "duration": { "estimated": 10, "actual": null },
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": []
+            },
+            {
+              "id": "test-anchor-a",
+              "name": "Якорь A: 10 минут",
+              "desc": "Фактическое время уже есть: 10 минут. Используй как якорь.",
+              "type": "cyclic",
+              "priority": 6,
+              "difficulty": 3,
+              "timeScore": 0.4,
+              "image": "",
+              "duration": { "estimated": 10, "actual": null },
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": [
+                {
+                  "at": 1767225600000,
+                  "actualMinutes": 10,
+                  "difficulty": 3,
+                  "moodId": "default"
+                }
+              ]
+            },
+            {
+              "id": "test-anchor-b",
+              "name": "Якорь B: 30 минут",
+              "desc": "Фактическое время уже есть: 30 минут. Используй как якорь.",
+              "type": "cyclic",
+              "priority": 6,
+              "difficulty": 7,
+              "timeScore": 1.3,
+              "image": "",
+              "duration": { "estimated": 30, "actual": null },
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": [
+                {
+                  "at": 1767225600000,
+                  "actualMinutes": 30,
+                  "difficulty": 7,
+                  "moodId": "default"
+                }
+              ]
+            },
+            {
+              "id": "test-calibrated",
+              "name": "Калиброванная",
+              "desc": "Время и сложность уже помечены как калиброванные.",
+              "type": "cyclic",
+              "priority": 6,
+              "difficulty": 5,
+              "timeScore": 1,
+              "image": "",
+              "duration": { "estimated": 25, "actual": null, "calibrated": true },
+              "sortTimeScore": 0.5,
+              "difficultyCalibrated": true,
+              "interval": { "totalMinutes": 1440 },
+              "completionHistory": []
+            }
+          ]
+        },
+        {
+          "id": "branch-misc",
+          "name": "04 Разное",
+          "children": [
+            {
+              "id": "test-single",
+              "name": "Одноразовая",
+              "desc": "Выполни через подтверждение и проверь архив.",
+              "type": "single",
+              "priority": 6,
+              "difficulty": 5,
+              "timeScore": 0.6,
+              "image": "",
+              "duration": { "estimated": 15, "actual": null },
+              "deadline": "2099-12-31"
+            },
+            {
+              "id": "test-nested",
+              "name": "Вложенная папка",
+              "children": [
+                {
+                  "id": "test-nested-a",
+                  "name": "Вложенная A",
+                  "desc": "Одноразовая внутри папки.",
+                  "type": "single",
+                  "priority": 5,
+                  "difficulty": 3,
+                  "timeScore": 0.4,
+                  "image": "",
+                  "duration": { "estimated": 10, "actual": null },
+                  "deadline": null
+                },
+                {
+                  "id": "test-nested-b",
+                  "name": "Вложенная B",
+                  "desc": "Вторая одноразовая внутри папки.",
+                  "type": "single",
+                  "priority": 4,
+                  "difficulty": 3,
+                  "timeScore": 0.4,
+                  "image": "",
+                  "duration": { "estimated": 10, "actual": null },
+                  "deadline": null
+                }
+              ]
+            },
+            {
+              "id": "test-hidden",
+              "name": "Скрытая в Устал",
+              "desc": "Не должна появляться в настроении «Устал».",
+              "type": "single",
+              "priority": 10,
+              "difficulty": 2,
+              "timeScore": 0.4,
+              "image": "",
+              "duration": { "estimated": 10, "actual": null },
+              "deadline": null
+            }
+          ]
+        }
+      ]
+    },
+    "moods": [
+      {
+        "id": "default",
+        "name": "Норма",
+        "description": "Баланс",
+        "theme": "bonsai",
+        "image": "",
+        "priorities": {
+          "test-quick-easy": 6,
+          "test-quick-hard": 6,
+          "test-long-easy": 5,
+          "test-long-hard": 5,
+          "test-important": 9,
+          "test-unimportant": 3,
+          "test-cooldown": 6,
+          "test-streak": 6,
+          "test-timer": 6,
+          "test-anchor-a": 6,
+          "test-anchor-b": 6,
+          "test-calibrated": 5,
+          "test-single": 6,
+          "test-nested-a": 5,
+          "test-nested-b": 4,
+          "test-hidden": 10
+        },
+        "hiddenTasks": [],
+        "sorting": {
+          "weights": { "importance": 0.6, "time": 0.25, "difficulty": 0.15 },
+          "directions": { "importance": 1, "time": -1, "difficulty": -1 },
+          "presetId": "balance"
+        }
+      },
+      {
+        "id": "tired",
+        "name": "Устал",
+        "description": "Короткое, лёгкое, без высоких ставок",
+        "theme": "bonsai",
+        "image": "",
+        "priorities": {
+          "test-quick-easy": 8,
+          "test-quick-hard": 5,
+          "test-long-easy": 5,
+          "test-long-hard": 3,
+          "test-important": 7,
+          "test-unimportant": 3,
+          "test-cooldown": 7,
+          "test-streak": 7,
+          "test-timer": 6,
+          "test-anchor-a": 6,
+          "test-anchor-b": 4,
+          "test-calibrated": 7,
+          "test-single": 5,
+          "test-nested-a": 5,
+          "test-nested-b": 4,
+          "test-hidden": 10
+        },
+        "hiddenTasks": ["test-hidden"],
+        "sorting": {
+          "weights": { "importance": 0.2, "time": 0.4, "difficulty": 0.4 },
+          "directions": { "importance": -1, "time": -1, "difficulty": -1 },
+          "presetId": "rest"
+        }
+      },
+      {
+        "id": "machine",
+        "name": "Я машина",
+        "description": "Важное, длинное, сложное",
+        "theme": "bonsai",
+        "image": "",
+        "priorities": {
+          "test-quick-easy": 4,
+          "test-quick-hard": 7,
+          "test-long-easy": 6,
+          "test-long-hard": 8,
+          "test-important": 9,
+          "test-unimportant": 3,
+          "test-cooldown": 6,
+          "test-streak": 6,
+          "test-timer": 6,
+          "test-anchor-a": 5,
+          "test-anchor-b": 7,
+          "test-calibrated": 5,
+          "test-single": 7,
+          "test-nested-a": 5,
+          "test-nested-b": 4,
+          "test-hidden": 8
+        },
+        "hiddenTasks": [],
+        "sorting": {
+          "weights": { "importance": 0.4, "time": 0.3, "difficulty": 0.3 },
+          "directions": { "importance": 1, "time": 1, "difficulty": 1 },
+          "presetId": "machine"
+        }
+      }
+    ],
+    "archive": [
+      {
+        "archiveId": "archive-manual-1",
+        "name": "Архивный пример",
+        "desc": "Проверь восстановление в «04 Разное».",
+        "type": "single",
+        "priority": 5,
+        "difficulty": 4,
+        "timeScore": 0.6,
+        "image": "",
+        "duration": { "estimated": 15, "actual": null },
+        "deadline": null,
+        "archivedAt": 1767225600000,
+        "moodId": "default",
+        "parentPath": ["Тестовое дерево", "04 Разное"]
+      }
+    ],
+    "log": [
+      {
+        "taskId": "test-anchor-a",
+        "taskName": "Якорь A: 10 минут",
+        "taskType": "cyclic",
+        "moodId": "default",
+        "completedAt": 1767225600000,
+        "parentPath": ["Тестовое дерево", "03 Механики"],
+        "taskPath": ["Тестовое дерево", "03 Механики", "Якорь A: 10 минут"],
+        "difficulty": 3,
+        "actualMinutes": 10
+      },
+      {
+        "taskId": "test-anchor-b",
+        "taskName": "Якорь B: 30 минут",
+        "taskType": "cyclic",
+        "moodId": "default",
+        "completedAt": 1767225600000,
+        "parentPath": ["Тестовое дерево", "03 Механики"],
+        "taskPath": ["Тестовое дерево", "03 Механики", "Якорь B: 30 минут"],
+        "difficulty": 7,
+        "actualMinutes": 30
+      }
+    ],
+    "settings": {
+      "theme": "bonsai",
+      "activeMood": "default",
+      "showHidden": "false",
+      "currentMode": "tinder"
+    },
+    "extra": {
+      "bonsai-test-marker": "manual-test-v1"
+    }
+  }
+}

@@ -4,7 +4,7 @@ import { logCompletion } from '../data/archive-store.js';
 import { getAverageDifficulty } from '../logic/cyclic-schedule.js';
 import { applyActualTimeStats } from '../logic/task-time.js';
 import {
-  getActiveTimerForTask,
+  getTimerForTask,
   getTimerElapsedMs,
   pauseTimer,
   resumeTimer,
@@ -40,11 +40,11 @@ export function openCompletionModal(task, moodId, onDone) {
   const estimateMinutes = getTaskEstimateMinutes(task.duration);
   const prefillMinutes = Math.max(1, Math.round(estimateMinutes));
 
-  let activeTimer = getActiveTimerForTask(task.id);
+  let activeTimer = getTimerForTask(task.id);
   const resumeAfterCancel = !!(activeTimer && !activeTimer.isPaused);
   if (resumeAfterCancel) {
-    pauseTimer();
-    activeTimer = getActiveTimerForTask(task.id);
+    pauseTimer(task.id);
+    activeTimer = getTimerForTask(task.id);
   }
 
   const overlay = document.createElement('div');
@@ -126,7 +126,7 @@ export function openCompletionModal(task, moodId, onDone) {
   const close = ({ resume = true } = {}) => {
     if (timerInterval) clearInterval(timerInterval);
     overlay.remove();
-    if (resume && resumeAfterCancel) resumeTimer();
+    if (resume && resumeAfterCancel) resumeTimer(task.id);
   };
 
   applyMetricStyle(difficultyEl, difficulty);
@@ -159,13 +159,13 @@ export function openCompletionModal(task, moodId, onDone) {
       const display = overlay.querySelector('#completion-timer-display');
       if (!display) return;
 
-      const timer = getActiveTimerForTask(task.id);
+      const timer = getTimerForTask(task.id);
       display.textContent = formatTimerClock(timer ? getTimerElapsedMs(timer) : 0);
     }, 1000);
   }
 
   function getActualMinutesForSave() {
-    const timer = getActiveTimerForTask(task.id);
+    const timer = getTimerForTask(task.id);
     const useTimer = useTimerEl ? useTimerEl.checked : false;
 
     if (useTimer) {
@@ -186,7 +186,7 @@ export function openCompletionModal(task, moodId, onDone) {
   async function saveCompletion() {
     if (saving) return;
 
-    const timerForConfirm = getActiveTimerForTask(task.id);
+    const timerForConfirm = getTimerForTask(task.id);
     if (useTimerEl && useTimerEl.checked && timerForConfirm) {
       const confirmed = window.confirm(
         `Записать время по таймеру: ${formatTimerClock(getTimerElapsedMs(timerForConfirm))}?`
@@ -227,7 +227,7 @@ export function openCompletionModal(task, moodId, onDone) {
         await saveTasksTreeWithRecovery(tree);
       }
 
-      if (getActiveTimerForTask(task.id)) stopTimer();
+      if (getTimerForTask(task.id)) stopTimer(task.id);
 
       logCompletion(
         { ...task, type: 'cyclic', path: task.path || [] },

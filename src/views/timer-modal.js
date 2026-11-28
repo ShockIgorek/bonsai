@@ -1,6 +1,6 @@
 import {
-  getActiveTimer,
-  getActiveTimerForTask,
+  getTimerForTask,
+  getRunningTimer,
   getTimerElapsedMs,
   startTimer,
   pauseTimer,
@@ -8,6 +8,7 @@ import {
   stopTimer
 } from '../data/timer-store.js';
 import { formatTimerClock } from '../utils/format-time.js';
+import { ICONS } from '../utils/icons.js';
 
 function escapeHtml(value) {
   return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
@@ -20,8 +21,8 @@ function escapeHtml(value) {
 }
 
 /**
- * Модалка секундомера для задачи.
- * Один активный таймер на приложение, состояние хранится в localStorage.
+ * Модалка таймера задачи.
+ * Один таймер может идти, остальные — стоять на паузе.
  */
 export function openTimerModal(task, moodId, onChanged) {
   const overlay = document.createElement('div');
@@ -49,11 +50,9 @@ export function openTimerModal(task, moodId, onChanged) {
         </div>
       </div>
 
-      <div class="modal-footer" style="display: flex; gap: 8px; flex-wrap: wrap;">
-        <button id="timer-start" class="btn-save" type="button" style="flex: 1; min-width: 120px;">Запустить таймер</button>
-        <button id="timer-pause" class="btn-save" type="button" style="flex: 1; min-width: 100px; background: var(--bg-panel); color: var(--text-main);">Пауза</button>
-        <button id="timer-resume" class="btn-save" type="button" style="flex: 1; min-width: 100px;">Продолжить</button>
-        <button id="timer-stop" class="btn-save" type="button" style="flex: 1; min-width: 100px; background: transparent; color: var(--danger); border: 1px solid var(--danger);">Стоп</button>
+      <div class="modal-footer timer-controls">
+        <button id="timer-toggle" class="timer-control-btn timer-control-primary" type="button" aria-label="Запустить таймер">${ICONS.play}</button>
+        <button id="timer-stop" class="timer-control-btn timer-control-danger" type="button" aria-label="Сбросить таймер" style="display: none;">${ICONS.stop}</button>
       </div>
     </div>
   `;
@@ -62,18 +61,17 @@ export function openTimerModal(task, moodId, onChanged) {
   const displayEl = overlay.querySelector('#timer-display');
   const statusEl = overlay.querySelector('#timer-status');
   const otherEl = overlay.querySelector('#timer-other');
-  const startBtn = overlay.querySelector('#timer-start');
-  const pauseBtn = overlay.querySelector('#timer-pause');
-  const resumeBtn = overlay.querySelector('#timer-resume');
+  const toggleBtn = overlay.querySelector('#timer-toggle');
   const stopBtn = overlay.querySelector('#timer-stop');
   let intervalId = null;
 
   function refresh() {
-    const active = getActiveTimer();
-    const current = active && active.taskId === String(task.id) ? active : null;
-    const other = active && active.taskId !== String(task.id) ? active : null;
+    const current = getTimerForTask(task.id);
+    const running = getRunningTimer();
+    const other = running && running.taskId !== String(task.id) ? running : null;
+    const elapsed = current ? getTimerElapsedMs(current) : 0;
 
-    displayEl.textContent = formatTimerClock(current ? getTimerElapsedMs(current) : 0);
+    displayEl.textContent = formatTimerClock(elapsed);
 
     if (current) {
       statusEl.textContent = current.isPaused ? 'Пауза' : 'Идёт';
@@ -83,16 +81,19 @@ export function openTimerModal(task, moodId, onChanged) {
 
     if (other) {
       otherEl.style.display = 'block';
-      otherEl.innerHTML = `Сейчас идёт таймер: <strong style="color: var(--text-main);">${escapeHtml(other.taskName)}</strong> · ${formatTimerClock(getTimerElapsedMs(other))}`;
+      otherEl.innerHTML = `Сейчас идёт таймер: <strong style="color: var(--text-main);">${escapeHtml(other.taskName)}</strong>. При запуске этого он встанет на паузу.`;
     } else {
       otherEl.style.display = 'none';
     }
 
-    startBtn.style.display = current ? 'none' : 'block';
-    startBtn.textContent = other ? 'Остановить текущий и начать' : 'Запустить таймер';
-    pauseBtn.style.display = current && !current.isPaused ? 'block' : 'none';
-    resumeBtn.style.display = current && current.isPaused ? 'block' : 'none';
-    stopBtn.style.display = current ? 'block' : 'none';
+    const runningCurrent = !!(current && !current.isPaused);
+    toggleBtn.innerHTML = runningCurrent ? ICONS.pause : ICONS.play;
+    const title = runningCurrent
+      ? 'Пауза'
+      : (current ? 'Продолжить' : 'Запустить таймер');
+    toggleBtn.title = title;
+    toggleBtn.setAttribute('aria-label', title);
+    stopBtn.style.display = current ? 'inline-flex' : 'none';
   }
 
   function close() {
@@ -105,41 +106,31 @@ export function openTimerModal(task, moodId, onChanged) {
     if (typeof onChanged === 'function') onChanged();
   }
 
-  startBtn.addEventListener('click', () => {
-    const active = getActiveTimer();
-    if (active && active.taskId !== String(task.id)) {
-      const ok = window.confirm(`Сейчас идёт таймер «${active.taskName}». Остановить его и запустить новый?`);
-      if (!ok) return;
-      stopTimer();
+  toggleBtn.addEventListener('click', () => {
+    const current = getTimerForTask(task.id);
+
+    if (current && !current.isPaused) {
+      pauseTimer(task.id);
+    } else if (current && current.isPaused) {
+      resumeTimer(task.id);
+    } else {
+      startTimer(task, moodId);
     }
 
-    startTimer(task, moodId);
-    refresh();
-    notifyChanged();
-  });
-
-  pauseBtn.addEventListener('click', () => {
-    pauseTimer();
-    refresh();
-    notifyChanged();
-  });
-
-  resumeBtn.addEventListener('click', () => {
-    resumeTimer();
     refresh();
     notifyChanged();
   });
 
   stopBtn.addEventListener('click', () => {
-    const current = getActiveTimerForTask(task.id);
-    const elapsed = current ? getTimerElapsedMs(current) : 0;
+    const current = getTimerForTask(task.id);
+    if (!current) return;
 
-    if (elapsed >= 60000) {
-      const ok = window.confirm('Остановить таймер? Замер не сохранится.');
+    if (getTimerElapsedMs(current) > 0) {
+      const ok = window.confirm('Сбросить таймер? Замер не сохранится.');
       if (!ok) return;
     }
 
-    stopTimer();
+    stopTimer(task.id);
     refresh();
     notifyChanged();
   });

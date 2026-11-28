@@ -6,7 +6,7 @@ import { formatTaskDuration, formatInterval, formatLastCompleted, formatCountdow
 import { applyMetricStyle } from '../utils/metric-style.js';
 import { getCooldownState, getLastCompletionAt } from '../logic/cyclic-schedule.js';
 import { completeSingleTask } from '../data/archive-store.js';
-import { getActiveTimerForTask, stopTimer } from '../data/timer-store.js';
+import { getTimerForTask, stopTimer } from '../data/timer-store.js';
 import { isQuotaError } from '../utils/media-compaction.js';
 import { openAddTaskModal, openDeleteTaskModal } from './task-modal.js';
 
@@ -186,7 +186,7 @@ export function openTaskView(task, onChanged) {
     if (!confirmed) return;
 
     try {
-      if (getActiveTimerForTask(task.id)) stopTimer();
+      if (getTimerForTask(task.id)) stopTimer(task.id);
       await completeSingleTask(task, activeMoodId);
       close();
     } catch (err) {

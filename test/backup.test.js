@@ -69,6 +69,7 @@ function seedStorage() {
     'bonsai-current-mode': 'navigation',
     'bonsai-test-extra': '{"enabled":true}',
     'bonsai-active-timer': '{"taskId":"task-a"}',
+    'bonsai-timers': '{"task-a":{"taskId":"task-a","isPaused":true}}',
     'bonsai-tinder-last-path': '["Мои задачи","Задача A"]'
   });
 }
@@ -90,6 +91,7 @@ test('full backup keeps data and strips base64 images', () => {
 
   assert.equal(backup.data.extra['bonsai-test-extra'], '{"enabled":true}');
   assert.equal('bonsai-active-timer' in backup.data.extra, false);
+  assert.equal('bonsai-timers' in backup.data.extra, false);
   assert.equal('bonsai-tinder-last-path' in backup.data.extra, false);
 });
 
@@ -140,6 +142,7 @@ test('full backup can be restored into empty storage', () => {
   assert.equal(memory.storage.getItem('bonsai-current-mode'), 'navigation');
   assert.equal(memory.storage.getItem('bonsai-test-extra'), '{"enabled":true}');
   assert.equal(memory.storage.getItem('bonsai-active-timer'), null);
+  assert.equal(memory.storage.getItem('bonsai-timers'), null);
   assert.equal(memory.storage.getItem('bonsai-tinder-last-path'), null);
 });
 

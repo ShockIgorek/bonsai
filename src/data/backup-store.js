@@ -21,6 +21,7 @@ const EXPLICIT_KEYS = new Set([
 // При переносе на другой origin это не нужно и может только запутать.
 const TRANSIENT_KEYS = new Set([
   'bonsai-active-timer',
+  'bonsai-timers',
   'bonsai-tinder-last-path',
   'bonsai-tinder-restore-index',
   'bonsai-last-screen'

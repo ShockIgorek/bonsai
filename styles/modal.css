@@ -146,6 +146,53 @@
   color: var(--text-secondary);
 }
 
+.timer-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.timer-control-btn {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s;
+}
+
+.timer-control-btn svg {
+  width: 28px;
+  height: 28px;
+}
+
+.timer-control-btn:active {
+  transform: scale(0.96);
+}
+
+.timer-control-primary {
+  border: none;
+  background: var(--accent);
+  color: var(--bg-main);
+}
+
+.timer-control-primary:hover {
+  filter: brightness(1.08);
+}
+
+.timer-control-danger {
+  border: 1px solid var(--danger);
+  background: transparent;
+  color: var(--danger);
+}
+
+.timer-control-danger:hover {
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
 /* Настройка весов и направлений сортировки настроения */
 .sorting-presets {
   display: flex;

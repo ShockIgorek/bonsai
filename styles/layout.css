@@ -85,6 +85,19 @@
   transform: scale(0.98);
 }
 
+@keyframes globalTimerPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
+.global-timer.is-running {
+  animation: globalTimerPulse 1.6s ease-out infinite;
+}
+
 /* Основной контент */
 .main-content {
   flex: 1;

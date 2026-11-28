@@ -11,7 +11,7 @@ import { getDisplayStreakSegments } from '../logic/streak.js';
 import { getMoodSorting, scoreTask } from '../logic/tinder-ranking.js';
 import { getAverageActualMinutes } from '../logic/task-time.js';
 import { cooldownPercent, cooldownSweepDegrees, cooldownShadeBackground } from '../utils/cooldown-display.js';
-import { getActiveTimerForTask, stopTimer } from '../data/timer-store.js';
+import { getTimerForTask, getTimers, stopTimer } from '../data/timer-store.js';
 import { completeSingleTask } from '../data/archive-store.js';
 import { isQuotaError } from '../utils/media-compaction.js';
 
@@ -53,6 +53,16 @@ style.textContent = `
   .tinder-metric-source.is-fact { color: var(--accent); }
   .tinder-metric-source.is-calibrated { color: var(--text-secondary); }
   .tinder-metric-source.is-estimate { color: var(--text-muted); }
+  @keyframes tinderTimerRunPulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+    50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 0%, transparent); }
+  }
+  @keyframes tinderTimerPausePulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 35%, transparent); }
+    50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 0%, transparent); }
+  }
+  .tinder-timer-btn.is-running { animation: tinderTimerRunPulse 1.4s ease-out infinite; }
+  .tinder-timer-btn.is-paused { animation: tinderTimerPausePulse 2.2s ease-in-out infinite; }
   .tinder-bonus-badge {
     display: inline-block;
     max-width: 100%;
@@ -155,7 +165,14 @@ export function renderTinderView() {
 
     // Взвешенная релевантность: важность + скорость + сложность.
     // Кулдаун умножает её на 0..1, восстановленная задача получает бонус 1.25.
+    // Задачи с таймером на паузе всегда поднимаются в начало колоды.
     const now = Date.now();
+    const pausedIds = new Set(
+      getTimers()
+        .filter(timer => timer.isPaused)
+        .map(timer => timer.taskId)
+    );
+
     const score = task => {
       const base = scoreTask({
         importance: priorityResolver.resolve(task.id),
@@ -165,7 +182,8 @@ export function renderTinderView() {
         difficulty: task.difficulty
       }, sorting);
 
-      return base * getCooldownState(task, now).multiplier;
+      const value = base * getCooldownState(task, now).multiplier;
+      return pausedIds.has(task.id) ? 1000 + value : value;
     };
 
     return result.sort((a, b) => score(b) - score(a));
@@ -233,6 +251,17 @@ export function renderTinderView() {
     pinCurrentCard(collectLeaves(), pathKeyOf(current), currentIndex, current ? current.id : null);
   }
 
+  /**
+   * После действий с таймером пересобирает колоду без закрепления:
+   * задачи на паузе должны сразу уйти в начало.
+   */
+  function refreshAfterTimer() {
+    const currentPath = pathKeyOf(leaves[currentIndex]);
+    leaves = collectLeaves();
+    const idx = leaves.findIndex(leaf => pathKeyOf(leaf) === currentPath);
+    currentIndex = idx !== -1 ? idx : Math.min(currentIndex, Math.max(0, leaves.length - 1));
+  }
+
   // Восстановление позиции
   const savedPath = localStorage.getItem('bonsai-tinder-last-path');
   const savedIndex = localStorage.getItem('bonsai-tinder-restore-index');
@@ -288,9 +317,10 @@ export function renderTinderView() {
     const cardOpacity = isCooling ? cooldown.opacity : 1;
     const lastCompletedAt = getLastCompletionAt(leaf);
     const streak = getDisplayStreakSegments(leaf, Date.now());
-    const activeTimer = getActiveTimerForTask(leaf.id);
-    const timerIsPaused = !!(activeTimer && activeTimer.isPaused);
-    const canUseTimer = isCyclic || !!activeTimer;
+    const taskTimer = getTimerForTask(leaf.id);
+    const timerIsRunning = !!(taskTimer && !taskTimer.isPaused);
+    const timerIsPaused = !!(taskTimer && taskTimer.isPaused);
+    const canUseTimer = isCyclic || !!taskTimer;
     const canComplete = isCyclic || leaf.type === 'single';
     const timeIsActual = getAverageActualMinutes(leaf) !== null;
     const timeIsCalibrated = !!(leaf.duration && leaf.duration.calibrated);
@@ -300,16 +330,19 @@ export function renderTinderView() {
     const difficultyIsCalibrated = !!leaf.difficultyCalibrated;
     const difficultySource = difficultyIsActual ? 'факт' : (difficultyIsCalibrated ? 'калибровка' : 'оценка');
     const difficultySourceClass = difficultyIsActual ? 'is-fact' : (difficultyIsCalibrated ? 'is-calibrated' : 'is-estimate');
-    const timerButtonBg = canUseTimer && activeTimer
-      ? (timerIsPaused ? 'var(--bg-panel)' : 'var(--accent)')
+    const timerButtonBg = timerIsRunning
+      ? 'var(--accent)'
       : 'var(--bg-panel)';
-    const timerButtonBorder = canUseTimer && activeTimer ? 'var(--accent)' : 'var(--border)';
-    const timerButtonGlow = canUseTimer && activeTimer && !timerIsPaused
-      ? '0 0 16px color-mix(in srgb, var(--accent) 55%, transparent)'
-      : 'none';
+    const timerButtonBorder = taskTimer ? 'var(--accent)' : 'var(--border)';
+    const timerButtonClass = timerIsRunning
+      ? 'is-running'
+      : (timerIsPaused ? 'is-paused' : '');
+    const timerButtonIcon = timerIsRunning
+      ? ICONS.pause
+      : (timerIsPaused ? ICONS.play : ICONS.timer);
     const timerButtonTitle = !canUseTimer
       ? 'Таймер доступен для циклических задач'
-      : (activeTimer
+      : (taskTimer
         ? (timerIsPaused ? 'Таймер на паузе' : 'Таймер идёт')
         : 'Таймер');
 
@@ -402,7 +435,7 @@ export function renderTinderView() {
             <!-- Кнопки (наполовину поверх картинки) -->
             <div style="display: flex; justify-content: space-evenly; align-items: center; margin-top: -32px; margin-bottom: 8px;">
               <button id="tinder-hide" class="tinder-action-btn" style="background: ${isNormalMode ? 'var(--bg-panel)' : 'var(--danger)'}; border: 3px solid ${isNormalMode ? 'var(--border)' : 'var(--danger)'}; color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; cursor: ${isNormalMode ? 'not-allowed' : 'pointer'}; display: flex; align-items: center; justify-content: center; opacity: ${isNormalMode ? '0.3' : '1'}; pointer-events: ${isNormalMode ? 'none' : 'auto'};" title="Скрыть">${ICONS.x}</button>
-              <button id="tinder-timer-main" class="tinder-action-btn" style="background: ${timerButtonBg}; border: 3px solid ${timerButtonBorder}; color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; cursor: ${canUseTimer ? 'pointer' : 'not-allowed'}; display: flex; align-items: center; justify-content: center; box-shadow: ${timerButtonGlow}; opacity: ${canUseTimer ? '1' : '0.3'}; pointer-events: ${canUseTimer ? 'auto' : 'none'};" title="${timerButtonTitle}" ${canUseTimer ? '' : 'disabled'}>${ICONS.timer}</button>
+              <button id="tinder-timer-main" class="tinder-action-btn tinder-timer-btn ${timerButtonClass}" style="background: ${timerButtonBg}; border: 3px solid ${timerButtonBorder}; color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; cursor: ${canUseTimer ? 'pointer' : 'not-allowed'}; display: flex; align-items: center; justify-content: center; opacity: ${canUseTimer ? '1' : '0.3'}; pointer-events: ${canUseTimer ? 'auto' : 'none'};" title="${timerButtonTitle}" ${canUseTimer ? '' : 'disabled'}>${timerButtonIcon}</button>
               <button id="tinder-complete" class="tinder-action-btn" style="background: var(--accent); border: 3px solid var(--accent); color: var(--text-main); width: 64px; height: 64px; border-radius: 50%; font-size: 24px; display: ${isCooling ? 'none' : 'flex'}; align-items: center; justify-content: center; opacity: ${canComplete ? '1' : '0.3'}; pointer-events: ${canComplete ? 'auto' : 'none'}; cursor: ${canComplete ? 'pointer' : 'not-allowed'};" title="${canComplete ? 'Выполнить' : 'Выполнение недоступно'}" ${canComplete ? '' : 'disabled'}>${ICONS.check}</button>
             </div>
 
@@ -528,7 +561,7 @@ export function renderTinderView() {
       const nextId = leaves[currentIndex + 1] ? leaves[currentIndex + 1].id : null;
 
       try {
-        if (getActiveTimerForTask(leaf.id)) stopTimer();
+        if (getTimerForTask(leaf.id)) stopTimer(leaf.id);
         await completeSingleTask(leaf, activeMoodId);
         advanceAfterCompletion(completedId, nextId);
         render();
@@ -576,7 +609,10 @@ export function renderTinderView() {
       e.stopPropagation();
       if (!canUseTimer) return;
       import('./timer-modal.js').then(({ openTimerModal }) => {
-        openTimerModal(leaf, activeMoodId, () => render());
+        openTimerModal(leaf, activeMoodId, () => {
+          refreshAfterTimer();
+          render();
+        });
       });
     });
 

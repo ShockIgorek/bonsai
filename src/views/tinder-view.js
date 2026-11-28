@@ -326,7 +326,8 @@ export function renderTinderView() {
                    <span class="tinder-placeholder" style="display: flex;">${ICONS.sprout}</span>
                  </div>`
             }
-            <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 18%; background: linear-gradient(to bottom, transparent, var(--bg-main));"></div>
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 26%; z-index: 1; background: linear-gradient(to bottom, var(--bg-main), transparent); pointer-events: none;"></div>
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 26%; z-index: 1; background: linear-gradient(to bottom, transparent, var(--bg-main)); pointer-events: none;"></div>
 
             <!-- Радиальный кулдаун поверх картинки -->
             <div

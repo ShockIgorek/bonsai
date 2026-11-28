@@ -7,23 +7,11 @@ const STATUS_WEAK = 'weak';
 const STATUS_MISSED = 'missed';
 const STATUS_EMPTY = 'empty';
 
-/**
- * Сегменты полосы серии по последним циклам.
- *
- * Правила (в долях интервала между выполнениями):
- *  - первое выполнение — полный сегмент;
- *  - повтор/досрочное выполнение < 150% — полный сегмент;
- *  - 150–200% — слабый сегмент (без свечения, с прозрачностью);
- *  - каждые следующие 100% без выполнения — пропущенный сегмент;
- *  - если выполнение случилось после пропусков — сначала пропуски, затем текущий.
- */
-export function getStreakSegments(task, now = Date.now(), count = STREAK_SEGMENTS) {
+function buildStatuses(task, now, includePending) {
   const intervalMinutes = getIntervalMinutes(task);
   const history = getCompletionHistory(task);
 
-  if (!intervalMinutes || !history.length) {
-    return Array(count).fill(STATUS_EMPTY);
-  }
+  if (!intervalMinutes || !history.length) return [];
 
   const intervalMs = intervalMinutes * 60000;
   const statuses = [STATUS_FULL];
@@ -48,18 +36,53 @@ export function getStreakSegments(task, now = Date.now(), count = STREAK_SEGMENT
     }
   }
 
-  // Пропуски, которые уже накопились в текущем ожидании
-  const lastAt = Number(history[history.length - 1].at);
-  if (Number.isFinite(lastAt)) {
-    const ratio = Math.max(0, now - lastAt) / intervalMs;
-    if (ratio >= 2) {
-      const missed = Math.max(0, Math.floor(ratio) - 1);
-      for (let missedIndex = 0; missedIndex < missed; missedIndex += 1) {
-        statuses.push(STATUS_MISSED);
+  // Пропуски, которые уже накопились в текущем ожидании.
+  // Для карточки их можно отключить: пока пользователь не выполнил задачу,
+  // это ещё не завершённый цикл, и шкала не должна «закрашиваться» сама.
+  if (includePending) {
+    const lastAt = Number(history[history.length - 1].at);
+    if (Number.isFinite(lastAt)) {
+      const ratio = Math.max(0, now - lastAt) / intervalMs;
+      if (ratio >= 2) {
+        const missed = Math.max(0, Math.floor(ratio) - 1);
+        for (let missedIndex = 0; missedIndex < missed; missedIndex += 1) {
+          statuses.push(STATUS_MISSED);
+        }
       }
     }
   }
 
-  const recent = statuses.slice(-count);
-  return recent.concat(Array(Math.max(0, count - recent.length)).fill(STATUS_EMPTY));
+  return statuses;
+}
+
+function padSegments(statuses, count) {
+  return statuses.concat(Array(Math.max(0, count - statuses.length)).fill(STATUS_EMPTY));
+}
+
+/**
+ * Полная история для статистики: последние `count` циклов,
+ * включая текущее ожидание.
+ */
+export function getStreakSegments(task, now = Date.now(), count = STREAK_SEGMENTS, options = {}) {
+  const includePending = options.includePending !== false;
+  const statuses = buildStatuses(task, now, includePending);
+  return padSegments(statuses.slice(-count), count);
+}
+
+/**
+ * Шкала для карточки: только завершённые циклы, без текущего ожидания.
+ * Начинаем с первого закрашенного сегмента, чтобы длина серии была видна.
+ */
+export function getDisplayStreakSegments(task, now = Date.now(), count = STREAK_SEGMENTS) {
+  const statuses = buildStatuses(task, now, false);
+  const window = statuses.slice(-count);
+  const firstFilled = window.findIndex(status => (
+    status === STATUS_FULL || status === STATUS_WEAK
+  ));
+
+  if (firstFilled === -1) {
+    return padSegments([], count);
+  }
+
+  return padSegments(window.slice(firstFilled), count);
 }

@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getStreakSegments, STREAK_SEGMENTS } from '../src/logic/streak.js';
+import {
+  getStreakSegments,
+  getDisplayStreakSegments,
+  STREAK_SEGMENTS
+} from '../src/logic/streak.js';
 
 const H = 3600000;
 const BASE = Date.UTC(2026, 0, 1);
@@ -48,4 +52,28 @@ test('strip always has exactly 10 segments', () => {
   const task = makeTask(Array.from({ length: 20 }, (_, index) => index * 20));
   const segments = getStreakSegments(task, BASE + 19 * 20 * H);
   assert.equal(segments.length, STREAK_SEGMENTS);
+});
+
+test('card display ignores pending waiting segments', () => {
+  const task = makeTask([0]);
+
+  const stats = getStreakSegments(task, BASE + 41 * H);
+  assert.deepEqual(stats.slice(0, 3), ['full', 'missed', 'empty']);
+
+  const display = getDisplayStreakSegments(task, BASE + 41 * H);
+  assert.deepEqual(display.slice(0, 3), ['full', 'empty', 'empty']);
+});
+
+test('card display starts from the first filled segment', () => {
+  // 0, 40ч (пропуск + выполнение), далее 8 выполнений каждые 20ч.
+  // В окне последних 10 первым идёт missed, поэтому шкала сдвигается к full.
+  const task = makeTask([0, 40, 60, 80, 100, 120, 140, 160, 180, 200]);
+
+  const stats = getStreakSegments(task, BASE + 200 * H);
+  assert.equal(stats[0], 'missed');
+
+  const display = getDisplayStreakSegments(task, BASE + 200 * H);
+  assert.equal(display[0], 'full');
+  assert.equal(display.filter(status => status === 'full').length, 9);
+  assert.equal(display[9], 'empty');
 });

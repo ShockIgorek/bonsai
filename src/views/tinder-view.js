@@ -7,7 +7,7 @@ import { formatInterval, formatTaskDuration, formatCountdown, formatLastComplete
 import { createPriorityResolver } from '../data/mood-priorities.js';
 import { applyMetricStyle } from '../utils/metric-style.js';
 import { getCooldownState, getLastCompletionAt, getDifficultyRatings } from '../logic/cyclic-schedule.js';
-import { getStreakSegments } from '../logic/streak.js';
+import { getDisplayStreakSegments } from '../logic/streak.js';
 import { getMoodSorting, scoreTask } from '../logic/tinder-ranking.js';
 import { getAverageActualMinutes } from '../logic/task-time.js';
 import { cooldownPercent, cooldownSweepDegrees, cooldownShadeBackground } from '../utils/cooldown-display.js';
@@ -287,7 +287,7 @@ export function renderTinderView() {
       : '';
     const cardOpacity = isCooling ? cooldown.opacity : 1;
     const lastCompletedAt = getLastCompletionAt(leaf);
-    const streak = getStreakSegments(leaf, Date.now());
+    const streak = getDisplayStreakSegments(leaf, Date.now());
     const activeTimer = getActiveTimerForTask(leaf.id);
     const timerIsPaused = !!(activeTimer && activeTimer.isPaused);
     const canUseTimer = isCyclic || !!activeTimer;
@@ -658,7 +658,7 @@ export function renderTinderView() {
 
       const streakEl = main.querySelector('#tinder-streak');
       if (streakEl) {
-        streakEl.innerHTML = renderStreakSegments(getStreakSegments(current, Date.now()));
+        streakEl.innerHTML = renderStreakSegments(getDisplayStreakSegments(current, Date.now()));
       }
     };
 

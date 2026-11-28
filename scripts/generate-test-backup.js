@@ -5,7 +5,7 @@ import { buildNavIndex } from '../src/store.js';
 import { getMoodSorting, scoreTask } from '../src/logic/tinder-ranking.js';
 import { createPriorityResolver } from '../src/data/mood-priorities.js';
 import { getCooldownState } from '../src/logic/cyclic-schedule.js';
-import { getStreakSegments } from '../src/logic/streak.js';
+import { getStreakSegments, getDisplayStreakSegments } from '../src/logic/streak.js';
 import { getAverageActualMinutes } from '../src/logic/task-time.js';
 import { getDifficultyRatings } from '../src/logic/cyclic-schedule.js';
 import { isTaskHiddenForMood } from '../src/data/moods-store.js';
@@ -92,7 +92,8 @@ for (const id of streakIds) {
   const node = nav.byId.get(id);
   streak[id] = {
     name: node.name,
-    segments: getStreakSegments(node, now)
+    segments: getStreakSegments(node, now),
+    displaySegments: getDisplayStreakSegments(node, now)
   };
 }
 
@@ -138,7 +139,7 @@ for (const [id, state] of Object.entries(cooldown)) {
 console.log('');
 console.log('Серия');
 for (const [id, state] of Object.entries(streak)) {
-  console.log(`  ${id}: ${state.segments.join(', ')}`);
+  console.log(`  ${id}: статистика [${state.segments.join(', ')}] · карточка [${state.displaySegments.join(', ')}]`);
 }
 
 console.log('');

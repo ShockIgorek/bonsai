@@ -10,7 +10,7 @@ import { getCooldownState, getLastCompletionAt, getDifficultyRatings } from '../
 import { getStreakSegments } from '../logic/streak.js';
 import { getMoodSorting, scoreTask } from '../logic/tinder-ranking.js';
 import { getAverageActualMinutes } from '../logic/task-time.js';
-import { cooldownPercent, cooldownShadeBackground } from '../utils/cooldown-display.js';
+import { cooldownPercent, cooldownSweepDegrees, cooldownShadeBackground } from '../utils/cooldown-display.js';
 import { getActiveTimerForTask, stopTimer } from '../data/timer-store.js';
 import { completeSingleTask } from '../data/archive-store.js';
 import { isQuotaError } from '../utils/media-compaction.js';
@@ -315,6 +315,12 @@ export function renderTinderView() {
               style="position: absolute; inset: 0; z-index: 2; pointer-events: none; background: ${isCooling ? cooldownShadeBackground(cooldown.ratio) : 'transparent'}; transition: background 0.3s linear;"
             ></div>
 
+            <!-- Граница сектора кулдауна -->
+            <div
+              id="tinder-cooldown-hand"
+              style="display: ${isCooling ? 'block' : 'none'}; position: absolute; left: 50%; top: 0; bottom: 50%; width: 2px; margin-left: -1px; transform-origin: 50% 100%; transform: rotate(${isCooling ? cooldownSweepDegrees(cooldown.ratio) : 0}deg); background: color-mix(in srgb, var(--text-main) 30%, transparent); box-shadow: 0 0 8px 2px color-mix(in srgb, var(--bg-main) 95%, transparent); z-index: 3; pointer-events: none; will-change: transform;"
+            ></div>
+
             <!-- Полоса серии: последние 10 циклов -->
             ${isCyclic ? `
               <div id="tinder-streak" style="position: absolute; bottom: 40px; left: 0; right: 0; display: flex; gap: 2px; z-index: 3;">
@@ -326,11 +332,14 @@ export function renderTinderView() {
                 id="tinder-cooldown"
                 style="display: ${isCooling ? 'flex' : 'none'}; position: absolute; top: 50%; left: 16px; right: 16px; transform: translateY(-50%); z-index: 4; justify-content: center; pointer-events: none;"
               >
-                <div style="padding: 9px 14px; border-radius: 16px; background: color-mix(in srgb, var(--bg-main) 76%, transparent); text-align: center; box-shadow: 0 4px 18px rgba(0,0,0,0.3); backdrop-filter: blur(3px);">
-                  <div id="tinder-restore-at" style="font-size: 11px; line-height: 1.25; color: var(--text-secondary); margin-bottom: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
-                    ${isCooling ? `восстановится ${formatShortDateTime(cooldown.nextAt)} · ${cooldownPercent(cooldown.ratio)}%` : ''}
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 200px; padding: 13px 18px; border-radius: 17px; background: color-mix(in srgb, var(--bg-main) 76%, transparent); text-align: center; box-shadow: 0 4px 18px rgba(0,0,0,0.3); backdrop-filter: blur(3px);">
+                  <div id="tinder-restore-at" style="font-size: 13px; line-height: 1.3; color: var(--text-secondary); text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
+                    ${isCooling ? `восстановится ${formatShortDateTime(cooldown.nextAt)}` : ''}
                   </div>
-                  <div id="tinder-countdown" style="color: var(--accent); font-size: 17px; font-weight: 800; line-height: 1.2; letter-spacing: 0.2px; text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
+                  <div id="tinder-cooldown-percent" title="Прогресс восстановления" style="font-size: 15px; font-weight: 800; line-height: 1.1; color: var(--text-main); font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
+                    ${isCooling ? `${cooldownPercent(cooldown.ratio)}%` : ''}
+                  </div>
+                  <div id="tinder-countdown" style="color: var(--accent); font-size: 19px; font-weight: 800; line-height: 1.2; letter-spacing: 0.2px; text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
                     ${isCooling ? `до восстановления ${formatCountdown(cooldown.remainingMs)}` : ''}
                   </div>
                 </div>
@@ -581,7 +590,12 @@ export function renderTinderView() {
 
       const restoreAtEl = main.querySelector('#tinder-restore-at');
       if (restoreAtEl) {
-        restoreAtEl.textContent = `восстановится ${formatShortDateTime(state.nextAt)} · ${cooldownPercent(state.ratio)}%`;
+        restoreAtEl.textContent = `восстановится ${formatShortDateTime(state.nextAt)}`;
+      }
+
+      const percentEl = main.querySelector('#tinder-cooldown-percent');
+      if (percentEl) {
+        percentEl.textContent = `${cooldownPercent(state.ratio)}%`;
       }
 
       const countdownEl = main.querySelector('#tinder-countdown');
@@ -592,6 +606,12 @@ export function renderTinderView() {
       const shadeEl = main.querySelector('#tinder-cooldown-shade');
       if (shadeEl) {
         shadeEl.style.background = cooldownShadeBackground(state.ratio);
+      }
+
+      const handEl = main.querySelector('#tinder-cooldown-hand');
+      if (handEl) {
+        handEl.style.display = 'block';
+        handEl.style.transform = `rotate(${cooldownSweepDegrees(state.ratio)}deg)`;
       }
 
       const photoEl = main.querySelector('#tinder-photo');

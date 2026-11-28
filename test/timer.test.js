@@ -4,6 +4,7 @@ import {
   getTimerForTask,
   getRunningTimer,
   getPausedTimers,
+  getPreferredTimer,
   getTimerElapsedMs,
   startTimer,
   pauseTimer,
@@ -73,6 +74,32 @@ test('starting another timer pauses the running one', () => {
     assert.equal(getTimerElapsedMs(second), 5_000);
     assert.equal(getRunningTimer().taskId, 'task-2');
     assert.deepEqual(getPausedTimers().map(timer => timer.taskId), ['task-1']);
+  } finally {
+    clock.restore();
+  }
+});
+
+test('header prefers running timer, then most recently started paused timer', () => {
+  installMemoryStorage();
+  installWindow();
+  const clock = setNow(2_500_000);
+
+  try {
+    startTimer(taskA, 'default');
+    clock.advance(1_000);
+    startTimer(taskB, 'default');
+    clock.advance(1_000);
+    startTimer({ id: 'task-3', name: 'Третья', path: [] }, 'default');
+
+    assert.equal(getPreferredTimer().taskId, 'task-3');
+
+    pauseTimer('task-3');
+
+    assert.equal(getPreferredTimer().taskId, 'task-3');
+    assert.deepEqual(
+      getPausedTimers().map(timer => timer.taskId),
+      ['task-3', 'task-2', 'task-1']
+    );
   } finally {
     clock.restore();
   }

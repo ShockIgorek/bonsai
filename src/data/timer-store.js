@@ -21,6 +21,7 @@ function normalizeTimer(timer) {
     startedAt: Number(timer.startedAt) || 0,
     accumulatedMs: Math.max(0, Number(timer.accumulatedMs) || 0),
     isPaused: !!timer.isPaused,
+    lastStartedAt: Number(timer.lastStartedAt) || Number(timer.startedAt) || Number(timer.updatedAt) || 0,
     updatedAt: Number(timer.updatedAt) || 0
   };
 }
@@ -82,7 +83,18 @@ export function getRunningTimer() {
 export function getPausedTimers() {
   return getTimers()
     .filter(timer => timer.isPaused)
-    .sort((a, b) => b.updatedAt - a.updatedAt);
+    .sort((a, b) => (
+      b.lastStartedAt - a.lastStartedAt
+      || b.updatedAt - a.updatedAt
+    ));
+}
+
+/**
+ * Для индикатора в шапке: сначала активный, затем последний запущенный
+ * среди таймеров на паузе.
+ */
+export function getPreferredTimer() {
+  return getRunningTimer() || getPausedTimers()[0] || null;
 }
 
 export function getTimerElapsedMs(timer, now = Date.now()) {
@@ -120,6 +132,7 @@ export function startTimer(task, moodId) {
     startedAt: now,
     accumulatedMs: 0,
     isPaused: false,
+    lastStartedAt: now,
     updatedAt: now
   };
 
@@ -165,6 +178,7 @@ export function resumeTimer(taskId) {
 
   target.startedAt = now;
   target.isPaused = false;
+  target.lastStartedAt = now;
   target.updatedAt = now;
   map[target.taskId] = target;
   writeTimerMap(map);

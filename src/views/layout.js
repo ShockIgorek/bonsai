@@ -1,6 +1,6 @@
 import { getMoods } from '../data/moods-store.js';
 import { ICONS } from '../utils/icons.js';
-import { getRunningTimer, getTimerElapsedMs } from '../data/timer-store.js';
+import { getPreferredTimer, getTimerElapsedMs } from '../data/timer-store.js';
 import { formatTimerClock } from '../utils/format-time.js';
 
 export function renderLayout({ showTabs = true, showHeader = true } = {}) {
@@ -111,22 +111,23 @@ function mountGlobalTimer(app) {
   if (!button || !value) return;
 
   const refresh = () => {
-    const timer = getRunningTimer();
+    const timer = getPreferredTimer();
     if (!timer) {
       button.style.display = 'none';
       button.classList.remove('is-running');
       return;
     }
 
+    const isRunning = !timer.isPaused;
     button.style.display = 'inline-flex';
-    button.style.opacity = '1';
-    button.classList.add('is-running');
+    button.style.opacity = isRunning ? '1' : '0.65';
+    button.classList.toggle('is-running', isRunning);
     value.textContent = formatTimerClock(getTimerElapsedMs(timer));
-    button.title = `Таймер: ${timer.taskName}`;
+    button.title = `${isRunning ? 'Таймер' : 'Пауза'}: ${timer.taskName}`;
   };
 
   const handleClick = () => {
-    const timer = getRunningTimer();
+    const timer = getPreferredTimer();
     if (!timer) return;
 
     if (timer.taskPath && timer.taskPath.length) {

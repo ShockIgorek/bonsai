@@ -38,6 +38,59 @@
 .theme-card:active { transform: scale(0.98); }
 .theme-card:hover { border-color: var(--accent); }
 
+.theme-card.is-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.theme-current-badge {
+  padding: 2px 7px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.theme-usage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 0 14px 12px;
+  text-align: left;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.theme-usage-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.theme-usage-chip {
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text-secondary);
+}
+
+.theme-usage-chip.is-current {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.theme-usage-empty {
+  color: var(--text-muted);
+}
+
 .theme-preview {
   position: relative;
   width: 100%;

@@ -1,6 +1,16 @@
 import { getMoods, updateMood } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 
+function escapeHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[ch]));
+}
+
 export const THEMES = [
   { id: 'bonsai', name: 'Bonsai' },
   { id: 'dark', name: 'Dark' },
@@ -27,10 +37,12 @@ export function renderThemesScreen({ forMoodId } = {}) {
   const app = document.getElementById('main-content');
   if (!app) return;
 
+  const moods = getMoods();
+
   // Какая тема сейчас активна для контекста?
   let currentTheme;
   if (forMoodId) {
-    const mood = getMoods().find(m => m.id === forMoodId);
+    const mood = moods.find(m => m.id === forMoodId);
     currentTheme = mood?.theme || 'bonsai';
   } else {
     currentTheme = localStorage.getItem('bonsai-theme') || 'bonsai';
@@ -46,8 +58,11 @@ export function renderThemesScreen({ forMoodId } = {}) {
       <div class="themes-list">
         ${THEMES.map(t => {
           const filter = getThemeFilter(t.id);
+          const assignedMoods = moods.filter(m => (m.theme || 'bonsai') === t.id);
+          const isCurrent = t.id === currentTheme;
+
           return `
-          <button class="theme-card" data-theme="${t.id}">
+          <button class="theme-card ${isCurrent ? 'is-current' : ''}" data-theme="${t.id}">
             <div class="theme-preview" data-theme="${t.id}">
               <div class="theme-bg" style="background: var(--bg-card);"></div>
               <div class="theme-preview-img" style="background-image: url('/assets/bonsai-preview.jpg'); filter: ${filter};"></div>
@@ -55,11 +70,25 @@ export function renderThemesScreen({ forMoodId } = {}) {
               <div class="theme-preview-overlay">
                 <div class="theme-preview-header">
                   <span class="theme-preview-title">${t.name}</span>
-                  <span class="theme-preview-badge"></span>
+                  <span style="display: flex; align-items: center; gap: 8px;">
+                    ${isCurrent ? '<span class="theme-current-badge">сейчас</span>' : ''}
+                    <span class="theme-preview-badge"></span>
+                  </span>
                 </div>
                 <div class="theme-preview-desc">Пример описания задачи</div>
                 <div class="theme-preview-btn">Сделать</div>
               </div>
+            </div>
+
+            <div class="theme-usage">
+              ${assignedMoods.length
+                ? `
+                  <span class="theme-usage-title">Используется:</span>
+                  ${assignedMoods.map(m => `
+                    <span class="theme-usage-chip ${m.id === forMoodId ? 'is-current' : ''}">${escapeHtml(m.name)}</span>
+                  `).join('')}
+                `
+                : `<span class="theme-usage-empty">${isCurrent ? 'Сейчас активна, не привязана к настроению' : 'Не используется'}</span>`}
             </div>
           </button>
         `}).join('')}

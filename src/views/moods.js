@@ -1,6 +1,7 @@
 import { getMoods } from '../data/moods-store.js';
 import { getTasksTree } from '../data/tasks-store.js';
 import { buildNavIndex } from '../store.js';
+import { ICONS } from '../utils/icons.js';
 import { getMoodSorting, getSortingPreferences } from '../logic/tinder-ranking.js';
 import { getMoodTopNodes } from '../logic/mood-summary.js';
 import { updateHeaderMoodName } from './layout.js';
@@ -82,7 +83,7 @@ export function renderMoodsScreen({ startup = false } = {}) {
               </button>
             </div>
 
-            <button class="edit-mood-btn" data-edit="${m.id}" aria-label="Редактировать">✏️</button>
+            <button class="edit-mood-btn" data-edit="${m.id}" aria-label="Редактировать">${ICONS.edit}</button>
             
             ${isActive ? '<div class="mood-active-badge">✓</div>' : ''}
           </div>

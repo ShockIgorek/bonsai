@@ -186,12 +186,13 @@
   position: absolute;
   top: 8px;
   right: 8px;
-  background: rgba(0,0,0,0.4);
+  background: color-mix(in srgb, var(--bg-main) 55%, transparent);
   border: none;
   cursor: pointer;
-  font-size: 14px;
-  width: 28px;
-  height: 28px;
+  padding: 0;
+  font-size: 0;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -199,6 +200,10 @@
   opacity: 0.9;
   transition: opacity 0.15s, transform 0.15s;
   z-index: 2;
+}
+.edit-mood-btn svg {
+  width: 18px;
+  height: 18px;
 }
 .edit-mood-btn:hover { opacity: 1; transform: scale(1.1); }
 

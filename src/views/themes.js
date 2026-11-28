@@ -1,7 +1,8 @@
 import { getMoods, updateMood } from '../data/moods-store.js';
 import { getThemeFilter } from '../utils/theme-filter.js';
 
-const THEMES = [
+export const THEMES = [
+  { id: 'bonsai', name: 'Bonsai' },
   { id: 'dark', name: 'Dark' },
   { id: 'light', name: 'Light' },
   { id: 'ember', name: 'Ember' },
